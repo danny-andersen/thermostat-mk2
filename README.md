@@ -1,7 +1,7 @@
 # thermostat-mk2
 Second generation of the digi-thermostat repo, using pizero 2w and a 7" LCD screen to run both the thermostat and control station functions.
 
-The original project can be found in digi-thermostat and used an Arduino to provide the digital thermostat functions and drove a 4 line 20 col LCD screen to show current status etc.
+The original project can be found in the digi-thermostat repo and used an Arduino to provide the digital thermostat functions and drove a 4 line 20 col LCD screen to show current status etc.
 It also included a masterstation that ran on a raspberry pi 3B that provided all of the in-station functionality. 
 
 This has run successfully for over 6 years, controlling the heating in my house but with the appearance (and availability!) of the Pi Zero 2W and cheap hi resolution LCDs, 
