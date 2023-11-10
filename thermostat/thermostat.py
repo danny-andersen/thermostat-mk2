@@ -271,7 +271,8 @@ def runLoop(cfg: configparser.ConfigParser, context: StationContext):
             # Not received a temp update from control for more than a set period - read local
             context.lastTempTime = nowTime
             (context.currentTemp, context.currentHumidity) = readTemp(True)
-        schedSetTemp = retrieveScheduledSetTemp(context, nowTime)
+        currentSchedule: ScheduleElement = retrieveScheduledSetTemp(context, nowTime)
+        schedSetTemp = currentSchedule.temp / 10.0
         checkOnHoliday(context, nowTime)
         if context.currentSetTemp != -100:
             if not context.heat_on and context.currentTemp < schedSetTemp:
