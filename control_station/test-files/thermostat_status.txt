@@ -1,0 +1,8 @@
+Current temp: 17.0
+Current set temp: 17.0
+Heat on? No
+Mins to set temp: 0
+External temp: 8.00
+No of Schedules: 13
+Last heard time: 20221229 10:50:11
+PIR:1

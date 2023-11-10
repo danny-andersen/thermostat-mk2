@@ -1,0 +1,6 @@
+Current temp: 18.10
+Current set temp: 17.50
+Heat on? No
+Mins to set temp: 0
+External temp: 10.00
+No of Schedules: 12

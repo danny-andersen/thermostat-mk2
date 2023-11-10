@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<SiteRep>
+    <Wx>
+        <Param name="F" units="C">Feels Like Temperature</Param>
+        <Param name="G" units="mph">Wind Gust</Param>
+        <Param name="H" units="%">Screen Relative Humidity</Param>
+        <Param name="T" units="C">Temperature</Param>
+        <Param name="V" units="">Visibility</Param>
+        <Param name="D" units="compass">Wind Direction</Param>
+        <Param name="S" units="mph">Wind Speed</Param>
+        <Param name="U" units="">Max UV Index</Param>
+        <Param name="W" units="">Weather Type</Param>
+        <Param name="Pp" units="%">Precipitation Probability</Param>
+    </Wx>
+    <DV dataDate="2022-12-29T09:00:00Z" type="Forecast">
+        <Location i="352627" lat="53.1923" lon="-2.4424" name="MIDDLEWICH" country="ENGLAND" continent="EUROPE" elevation="30.0">
+            <Period type="Day" value="2023-03-18Z">
+                <Rep D="SW" F="5" G="27" H="88" Pp="6" S="7" T="7" V="VG" W="7" U="0">360</Rep>
+                <Rep D="SW" F="4" G="31" H="80" Pp="0" S="9" T="6" V="VG" W="1" U="1">540</Rep>
+                <Rep D="WSW" F="4" G="34" H="73" Pp="1" S="18" T="8" V="EX" W="1" U="1">720</Rep>
+                <Rep D="WSW" F="3" G="31" H="73" Pp="2" S="18" T="7" V="EX" W="1" U="1">900</Rep>
+                <Rep D="SW" F="2" G="22" H="82" Pp="1" S="9" T="5" V="VG" W="0" U="0">1080</Rep>
+                <Rep D="S" F="1" G="22" H="87" Pp="4" S="9" T="4" V="VG" W="7" U="0">1260</Rep>
+            </Period>
+            <Period type="Day" value="2022-12-30Z">
+                <Rep D="S" F="1" G="27" H="82" Pp="6" S="13" T="5" V="VG" W="7" U="0">0</Rep>
+                <Rep D="S" F="2" G="38" H="81" Pp="7" S="20" T="7" V="EX" W="7" U="0">180</Rep>
+                <Rep D="S" F="4" G="40" H="77" Pp="56" S="22" T="8" V="EX" W="12" U="0">360</Rep>
+                <Rep D="SSE" F="5" G="36" H="87" Pp="82" S="20" T="9" V="GO" W="15" U="1">540</Rep>
+                <Rep D="SSW" F="8" G="29" H="86" Pp="17" S="16" T="11" V="VG" W="8" U="1">720</Rep>
+                <Rep D="SW" F="7" G="27" H="81" Pp="10" S="13" T="10" V="VG" W="7" U="1">900</Rep>
+                <Rep D="SW" F="5" G="25" H="81" Pp="8" S="11" T="8" V="VG" W="7" U="0">1080</Rep>
+                <Rep D="SSW" F="5" G="22" H="84" Pp="7" S="11" T="8" V="VG" W="7" U="0">1260</Rep>
+            </Period>
+            <Period type="Day" value="2022-12-31Z">
+                <Rep D="S" F="5" G="20" H="88" Pp="7" S="9" T="7" V="VG" W="7" U="0">0</Rep>
+                <Rep D="SSE" F="5" G="22" H="90" Pp="15" S="11" T="8" V="GO" W="7" U="0">180</Rep>
+                <Rep D="S" F="6" G="25" H="91" Pp="86" S="13" T="9" V="MO" W="15" U="0">360</Rep>
+                <Rep D="SW" F="6" G="20" H="91" Pp="48" S="9" T="9" V="VG" W="12" U="1">540</Rep>
+                <Rep D="SSW" F="8" G="20" H="86" Pp="53" S="11" T="10" V="VG" W="12" U="1">720</Rep>
+                <Rep D="SSW" F="7" G="20" H="82" Pp="40" S="11" T="9" V="VG" W="10" U="1">900</Rep>
+                <Rep D="SSW" F="5" G="18" H="85" Pp="21" S="9" T="8" V="VG" W="7" U="0">1080</Rep>
+                <Rep D="SSW" F="4" G="18" H="89" Pp="47" S="9" T="7" V="VG" W="9" U="0">1260</Rep>
+            </Period>
+            <Period type="Day" value="2023-01-01Z">
+                <Rep D="SSW" F="3" G="16" H="90" Pp="50" S="9" T="6" V="VG" W="12" U="0">0</Rep>
+                <Rep D="S" F="3" G="16" H="91" Pp="10" S="9" T="6" V="VG" W="2" U="0">180</Rep>
+                <Rep D="S" F="3" G="18" H="91" Pp="10" S="9" T="6" V="VG" W="2" U="0">360</Rep>
+                <Rep D="S" F="3" G="20" H="90" Pp="15" S="11" T="6" V="VG" W="7" U="1">540</Rep>
+                <Rep D="S" F="5" G="22" H="84" Pp="14" S="11" T="8" V="VG" W="7" U="1">720</Rep>
+                <Rep D="SSW" F="6" G="20" H="78" Pp="13" S="11" T="8" V="VG" W="7" U="1">900</Rep>
+                <Rep D="SW" F="4" G="18" H="84" Pp="10" S="11" T="7" V="VG" W="2" U="0">1080</Rep>
+                <Rep D="SW" F="3" G="16" H="88" Pp="9" S="9" T="6" V="VG" W="2" U="0">1260</Rep>
+            </Period>
+            <Period type="Day" value="2023-01-02Z">
+                <Rep D="SW" F="3" G="13" H="91" Pp="6" S="7" T="5" V="GO" W="2" U="0">0</Rep>
+                <Rep D="SW" F="2" G="13" H="92" Pp="9" S="7" T="4" V="GO" W="2" U="0">180</Rep>
+                <Rep D="W" F="1" G="11" H="93" Pp="4" S="7" T="4" V="GO" W="2" U="0">360</Rep>
+                <Rep D="W" F="1" G="11" H="90" Pp="2" S="7" T="3" V="VG" W="1" U="1">540</Rep>
+                <Rep D="WSW" F="4" G="13" H="82" Pp="2" S="7" T="6" V="VG" W="1" U="1">720</Rep>
+                <Rep D="WSW" F="4" G="9" H="83" Pp="3" S="4" T="6" V="VG" W="3" U="1">900</Rep>
+                <Rep D="SSW" F="0" G="11" H="89" Pp="3" S="7" T="3" V="VG" W="0" U="0">1080</Rep>
+                <Rep D="S" F="-1" G="11" H="92" Pp="3" S="7" T="2" V="VG" W="0" U="0">1260</Rep>
+            </Period>
+        </Location>
+    </DV>
+</SiteRep>
