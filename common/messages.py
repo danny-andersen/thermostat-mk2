@@ -3,6 +3,7 @@ from os import path
 import json
 from struct import unpack
 from enum import Enum
+import configparser
 
 
 MAX_MESSAGE_SIZE = 128
@@ -172,11 +173,11 @@ class SchedByElem(LittleEndianStructure):
 
 
 class ScheduleElement:
-    day: int  # = "0" for every day, "0x0100" for Weekday (Mon - Fri),
+    day: int = 0  # = "0" for every day, "0x0100" for Weekday (Mon - Fri),
     # "0x0200" for Weekend (Sat, Sun), 1 - Sunday, 2 - Monday, 3 - Tuesday,....7 - Saturday
-    start: int  # Start minute (0 - 1440)
-    end: int  # End time minute (0 - 1440)
-    temp: int  # Set temperature tenths of C, 180 = 18.0C
+    start: int = 0  # Start minute (0 - 1440)
+    end: int = 1440  # End time minute (0 - 1440)
+    temp: int = -1000  # Set temperature tenths of C, 180 = 18.0C
 
     def __init__(self, *args):
         if len(args) == 4:
@@ -262,8 +263,22 @@ class StationContext:
     isDefaultSchedule = False
     onHoliday = False
     windStr = ""
+    reset = 0
+    # Constants overriden by .ini file
+    RELAY_OUT = 27
+    PIR_IN = 17
+    GREEN_LED = 23
+    RED_LED = 22
+    TEMP_PERIOD = 60
+    HYSTERISIS = 0.2
+    GET_MSG_PERIOD = 15
+    DEFAULT_TEMP = 10.0
+    SET_TEMP_PERIOD = 3600
+    DEBUG = False
+
     schedules: {ScheduleElement} = set()
-    currentHoliday = Holiday()
+    currentHoliday: Holiday = Holiday()
+    config: configparser.ConfigParser = configparser.ConfigParser()
 
     def __init__(self, stn=-1) -> None:
         self.stationNo = stn
