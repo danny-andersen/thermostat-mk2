@@ -22,10 +22,7 @@ from common.messages import *
 # &r=< mins to set temp, 0 off>
 # &p=<1 sensor triggered, 0 sensor off>
 def sendMessage(ctx: StationContext):
-    setup_cfg = context.config["setup"]
-    station_num = setup_cfg["station_num"]
-    controlstation_url = setup_cfg["controlstation_url"]
-    url_parts = [f"{controlstation_url}/message?s={station_num}&u=1"]
+    url_parts = [f"{ctx.controlstation_url}/message?s={ctx.station_num}&u=1"]
     if ctx.reset:
         url_parts.append("&rs=1")
         ctx.reset = False
@@ -293,10 +290,15 @@ def runLoop(ctx: StationContext):
         nowTime = datetime.now()
         nowSecs = nowTime.timestamp()
         chgState = False
-        if (nowSecs - ctx.lastTempTime) > TEMP_PERIOD:
+        if (nowSecs - ctx.lastTempTime) > ctx.TEMP_PERIOD:
             # Not received a temp update from control for more than a set period - read local
             ctx.lastTempTime = nowSecs
             (ctx.currentTemp, ctx.currentHumidity) = readTemp(True)
+            if ctx.DEBUG:
+                print(
+                    f"Read local temp: {ctx.currentTemp} Humidity: {ctx.currentHumidity}"
+                )
+
         if (nowSecs - ctx.setTempTime) > ctx.SET_TEMP_PERIOD:
             # Manually set temp has expired
             ctx.currentSetTemp = -100
@@ -321,14 +323,19 @@ def runLoop(ctx: StationContext):
             print(
                 f"{nowTime}: Calculated Set temp: {setTemp} Sched temp: {schedSetTemp} Holiday temp: {holidayTemp} Current Temp: {ctx.currentTemp}\n"
             )
-        if not ctx.heat_on and ctx.currentTemp < setTemp:
+        if not ctx.heat_on and (ctx.currentTemp < setTemp and ctx.currentTemp != -100):
+            # Only turn on heating if have a valid temp reading
             relay_on(ctx)
             ctx.heat_on = True
             chgState = True
+            if ctx.DEBUG:
+                print(f"{nowTime}: HEAT ON")
         elif ctx.heat_on and ctx.currentTemp > (setTemp + ctx.HYSTERISIS):
             relay_off(ctx)
             ctx.heat_on = False
             chgState = True
+            if ctx.DEBUG:
+                print(f"{nowTime}: HEAT OFF")
 
         pir_stat = checkPIR(ctx)
         if pir_stat:
@@ -337,13 +344,18 @@ def runLoop(ctx: StationContext):
         if not ctx.current_pir_stat and pir_stat:
             ctx.current_pir_stat = True
             chgState = True
+            if ctx.DEBUG:
+                print(f"{nowTime}: PIR ON")
         elif ctx.current_pir_stat and not pir_stat:
             # Signal for display to be turned off
             # displayOff(ctx)
             ctx.current_pir_stat = False
             chgState = True
-        if chgState or (nowSecs - ctx.lastMessageTime) > ctx.GET_MSG_PERIOD:
+            if ctx.DEBUG:
+                print(f"{nowTime}: PIR OFF")
+        if chgState or ((nowSecs - ctx.lastMessageTime) > ctx.GET_MSG_PERIOD):
             # Send update in status and get any messages from control station
+            chgState = True
             while chgState:
                 chgState = sendMessage(ctx)
                 ctx.lastMessageTime = nowSecs
@@ -353,23 +365,7 @@ def runLoop(ctx: StationContext):
 
 if __name__ == "__main__":
     print("Starting thermostat service")
-    context: StationContext = StationContext()
-    context.config.read("./thermostat.ini")
-    setup_cfg = context.config["setup"]
-    context.HYSTERISIS = float(setup_cfg["HYSTERISIS"])
-    context.DEFAULT_TEMP = float(setup_cfg["DEFAULT_TEMP"])
-    context.DEBUG = bool(setup_cfg["DEBUG"])
-
-    gpio_cfg = context.config["GPIO"]
-    context.RELAY_OUT = int(gpio_cfg["RELAY_OUT"])
-    context.PIR_IN = int(gpio_cfg["PIR_IN"])
-    context.GREEN_LED = int(gpio_cfg["GREEN_LED"])
-    context.RED_LED = int(gpio_cfg["RED_LED"])
-
-    timings_cfg = context.config["timings"]
-    context.TEMP_PERIOD = int(timings_cfg["TEMP_PERIOD"])
-    context.SET_TEMP_PERIOD = int(timings_cfg["SET_TEMP_PERIOD"])
-    context.GET_MSG_PERIOD = int(timings_cfg["GET_MSG_PERIOD"])
+    context: StationContext = StationContext(configFile="./thermostat.ini")
 
     # Use GPIO numbering, not pin numbering
     GPIO.setmode(GPIO.BCM)

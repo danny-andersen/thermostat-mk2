@@ -246,9 +246,9 @@ class StationContext:
     currentSetTemp: float = -1000.0  # current set temp
     currentBoilerStatus = 0.0  # off
     currentPirStatus = 0  # off
-    currentTemp: float = -1000.0
-    currentHumidity: float = -1000.0
-    currentExtTemp = -1000.0
+    currentTemp: float = -100.0
+    currentHumidity: float = -100.0
+    currentExtTemp = -100.0
     noOfSchedules = 0
 
     # Non-persisted fields:
@@ -264,6 +264,8 @@ class StationContext:
     onHoliday = False
     windStr = ""
     reset = 0
+    controlStationUrl = ""
+
     # Constants overriden by .ini file
     RELAY_OUT = 27
     PIR_IN = 17
@@ -280,9 +282,33 @@ class StationContext:
     currentHoliday: Holiday = Holiday()
     config: configparser.ConfigParser = configparser.ConfigParser()
 
-    def __init__(self, stn=-1) -> None:
+    def __init__(self, stn=-1, configFile="") -> None:
         self.stationNo = stn
-        self.getSavedContext()
+        if configFile != "":
+            # Load initial config from config file
+            self.config.read(configFile)
+            setup_cfg = self.config["setup"]
+            self.HYSTERISIS = float(setup_cfg["HYSTERISIS"])
+            self.DEFAULT_TEMP = float(setup_cfg["DEFAULT_TEMP"])
+            self.DEBUG = bool(setup_cfg["DEBUG"])
+            self.station_num = setup_cfg["station_num"]
+            self.controlstation_url = setup_cfg["controlstation_url"]
+
+            gpio_cfg = self.config["GPIO"]
+            self.RELAY_OUT = int(gpio_cfg["RELAY_OUT"])
+            self.PIR_IN = int(gpio_cfg["PIR_IN"])
+            self.GREEN_LED = int(gpio_cfg["GREEN_LED"])
+            self.RED_LED = int(gpio_cfg["RED_LED"])
+
+            timings_cfg = self.config["timings"]
+            self.TEMP_PERIOD = int(timings_cfg["TEMP_PERIOD"])
+            self.SET_TEMP_PERIOD = int(timings_cfg["SET_TEMP_PERIOD"])
+            self.GET_MSG_PERIOD = int(timings_cfg["GET_MSG_PERIOD"])
+            print(f"TEMP PERIOD: {self.TEMP_PERIOD}, MSG_PERIOD: {self.GET_MSG_PERIOD}")
+
+        else:
+            # load saved context
+            self.getSavedContext()
 
     # def __init__(self, stn) -> None:
     #     self.stationNo = stn
