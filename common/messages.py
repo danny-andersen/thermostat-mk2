@@ -255,7 +255,8 @@ class StationContext:
     lastMonitorTime = 0
     lastMessageTime = 0
     lastTempTime = 0
-    current_pir_stat = False
+    lastPirTime = 0
+    pir_stat = 0
     heat_on = False
     currentSentThermTemp = 100.0
     manHolidayTemp = 100.0
@@ -271,7 +272,9 @@ class StationContext:
     PIR_IN = 17
     GREEN_LED = 23
     RED_LED = 22
+    TEMP_SENSOR = 18
     TEMP_PERIOD = 60
+    PIR_TRIGGER_PERIOD = 30
     HYSTERISIS = 0.2
     GET_MSG_PERIOD = 15
     DEFAULT_TEMP = 10.0
@@ -299,12 +302,14 @@ class StationContext:
             self.PIR_IN = int(gpio_cfg["PIR_IN"])
             self.GREEN_LED = int(gpio_cfg["GREEN_LED"])
             self.RED_LED = int(gpio_cfg["RED_LED"])
+            self.RED_LED = int(gpio_cfg["TEMP_SENSOR"])
 
             timings_cfg = self.config["timings"]
             self.TEMP_PERIOD = int(timings_cfg["TEMP_PERIOD"])
             self.SET_TEMP_PERIOD = int(timings_cfg["SET_TEMP_PERIOD"])
             self.GET_MSG_PERIOD = int(timings_cfg["GET_MSG_PERIOD"])
-            print(f"TEMP PERIOD: {self.TEMP_PERIOD}, MSG_PERIOD: {self.GET_MSG_PERIOD}")
+            self.PIR_TRIGGER_PERIOD = int(timings_cfg["PIR_TRIGGER_PERIOD"])
+            # print(f"TEMP PERIOD: {self.TEMP_PERIOD}, MSG_PERIOD: {self.GET_MSG_PERIOD}")
 
         else:
             # load saved context

@@ -28,7 +28,7 @@ def sendMessage(ctx: StationContext):
         ctx.reset = False
     else:
         url_parts.append("&rs=0")
-    url_parts.append(f"&p={ctx.current_pir_stat}")
+    url_parts.append(f"&p={ctx.pir_stat}")
     url_parts.append(f"&t={ctx.currentTemp}")
     url_parts.append(f"&h={ctx.currentHumidity}")
     url_parts.append(f"&st={ctx.currentSetTemp}")
@@ -266,17 +266,23 @@ def setLED(ctx: StationContext, colour: LedColour):
 
 
 def relay_off(ctx: StationContext):
-    GPIO.output(ctx.RELAY_OUT, GPIO.LOW)
+    GPIO.output(ctx.RELAY_OUT, GPIO.HIGH)
     setLED(ctx, LedColour.RED)
 
 
 def relay_on(ctx: StationContext):
-    GPIO.output(ctx.RELAY_OUT, GPIO.HIGH)
+    GPIO.output(ctx.RELAY_OUT, GPIO.LOW)
     setLED(ctx, LedColour.GREEN)
 
 
-def checkPIR(ctx: StationContext):
-    return GPIO.input(ctx.PIR_IN)
+def checkPIR(ctx: StationContext, nowSecs: float):
+    # High = off, Low = on (triggered)
+    status = not GPIO.input(ctx.PIR_IN)
+    if status:
+        ctx.lastPirTime = nowSecs
+        ctx.pir_stat = 1
+    elif nowSecs - ctx.lastPirTime > ctx.PIR_TRIGGER_PERIOD:
+        ctx.pir_stat = 0
 
 
 def displayOn(ctx: StationContext):
@@ -337,19 +343,19 @@ def runLoop(ctx: StationContext):
             if ctx.DEBUG:
                 print(f"{nowTime}: HEAT OFF")
 
-        pir_stat = checkPIR(ctx)
-        if pir_stat:
+        checkPIR(ctx, nowSecs)
+        if ctx.pir_stat:
             # Signal for display to be turned on
             displayOn(ctx)
-        if not ctx.current_pir_stat and pir_stat:
-            ctx.current_pir_stat = True
+        if not ctx.currentPirStatus and ctx.pir_stat:
+            ctx.currentPirStatus = 1
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: PIR ON")
-        elif ctx.current_pir_stat and not pir_stat:
+        elif ctx.currentPirStatus and not ctx.pir_stat:
             # Signal for display to be turned off
             # displayOff(ctx)
-            ctx.current_pir_stat = False
+            ctx.currentPirStatus = False
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: PIR OFF")
@@ -371,6 +377,7 @@ if __name__ == "__main__":
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(context.RELAY_OUT, GPIO.OUT)  # Relay output
     GPIO.setup(context.PIR_IN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Relay output
+    GPIO.setup(context.TEMP_SENSOR, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # DHT22
     GPIO.setup(context.GREEN_LED, GPIO.OUT)  # Green LED lit when boiler on
     GPIO.setup(context.RED_LED, GPIO.OUT)  # RED LED lit when boiler off
     setLED(context, LedColour.AMBER)
@@ -389,5 +396,7 @@ if __name__ == "__main__":
     relay_off(context)
 
     sleep(5)
+
+    setLED(context, LedColour.RED)
 
     runLoop(context)
