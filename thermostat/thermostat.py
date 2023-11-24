@@ -3,7 +3,11 @@ import sys
 from datetime import datetime
 from time import sleep
 import requests
-import RPi.GPIO as GPIO
+
+# import RPi.GPIO as GPIO
+# import board
+# import digitalio
+from gpiozero import LED, MotionSensor, OutputDevice
 import crcmod
 import crcmod.predefined
 
@@ -29,9 +33,9 @@ def sendMessage(ctx: StationContext):
     else:
         url_parts.append("&rs=0")
     url_parts.append(f"&p={ctx.pir_stat}")
-    url_parts.append(f"&t={ctx.currentTemp}")
-    url_parts.append(f"&h={ctx.currentHumidity}")
-    url_parts.append(f"&st={ctx.currentSetTemp}")
+    url_parts.append(f"&t={ctx.currentTemp*10}")
+    url_parts.append(f"&h={ctx.currentHumidity*10}")
+    url_parts.append(f"&st={ctx.currentSetTemp*10}")
     url_parts.append(f"&r={ctx.heat_on}")
     url = "".join(url_parts)
     chgState = False
@@ -70,6 +74,8 @@ def extTempMsg(ctx: StationContext, msgBytes: bytearray):
 def setCurrentTempMsg(ctx: StationContext, msgBytes: bytearray):
     tempMsg = Temp(msgBytes)
     ctx.currentTemp = tempMsg.temp
+    ctx.TEMP_PERIOD = ctx.config["timings"]["TEMP_PERIOD"]
+    ctx.lastTempTime = datetime.now().timestamp()
     return True
 
 
@@ -251,33 +257,56 @@ def checkOnHoliday(ctx: StationContext, nowSecs: float):
 
 
 def setLED(ctx: StationContext, colour: LedColour):
+    if ctx.DEBUG:
+        print(f"Set LED to {colour.name}")
+
+    # GPIO.setmode(GPIO.BCM)
     if colour == LedColour.GREEN:
-        GPIO.output(ctx.GREEN_LED, GPIO.HIGH)
-        GPIO.output(ctx.RED_LED, GPIO.LOW)
+        # GPIO.output(ctx.GREEN_LED, GPIO.HIGH)
+        # GPIO.output(ctx.RED_LED, GPIO.LOW)
+        ctx.greenLED.on()
+        ctx.redLED.off()
     elif colour == LedColour.RED:
-        GPIO.output(ctx.GREEN_LED, GPIO.LOW)
-        GPIO.output(ctx.RED_LED, GPIO.HIGH)
+        # GPIO.output(ctx.GREEN_LED, GPIO.LOW)
+        # GPIO.output(ctx.RED_LED, GPIO.HIGH)
+        ctx.greenLED.off()
+        ctx.redLED.on()
     elif colour == LedColour.AMBER:
-        GPIO.output(ctx.GREEN_LED, GPIO.HIGH)
-        GPIO.output(ctx.RED_LED, GPIO.HIGH)
+        # GPIO.output(ctx.GREEN_LED, GPIO.HIGH)
+        # GPIO.output(ctx.RED_LED, GPIO.HIGH)
+        ctx.greenLED.on()
+        ctx.redLED.on()
     else:
-        GPIO.output(ctx.GREEN_LED, GPIO.LOW)
-        GPIO.output(ctx.RED_LED, GPIO.LOW)
+        # GPIO.output(ctx.GREEN_LED, GPIO.LOW)
+        # GPIO.output(ctx.RED_LED, GPIO.LOW)
+        ctx.greenLED.off()
+        ctx.redLED.off()
 
 
 def relay_off(ctx: StationContext):
-    GPIO.output(ctx.RELAY_OUT, GPIO.HIGH)
+    if ctx.DEBUG:
+        print("Relay OFF")
+    # GPIO.setmode(GPIO.BCM)
+    # GPIO.output(ctx.RELAY_OUT, GPIO.LOW)
+    ctx.relay.off()
     setLED(ctx, LedColour.RED)
 
 
 def relay_on(ctx: StationContext):
-    GPIO.output(ctx.RELAY_OUT, GPIO.LOW)
+    if ctx.DEBUG:
+        print("Relay ON")
+    # GPIO.output(ctx.RELAY_OUT, GPIO.HIGH)
+    ctx.relay.on()
     setLED(ctx, LedColour.GREEN)
 
 
 def checkPIR(ctx: StationContext, nowSecs: float):
     # High = off, Low = on (triggered)
-    status = not GPIO.input(ctx.PIR_IN)
+    # GPIO.setmode(GPIO.BCM)
+    # status = not GPIO.input(ctx.PIR_IN)
+    status = ctx.pir.value
+    if ctx.DEBUG:
+        print(f"PIR: {'ON' if status else 'OFF'}")
     if status:
         ctx.lastPirTime = nowSecs
         ctx.pir_stat = 1
@@ -292,6 +321,16 @@ def displayOn(ctx: StationContext):
 
 def runLoop(ctx: StationContext):
     # This function never returns unless there is an uncaught exception
+    # # Use GPIO numbering, not pin numbering
+    # GPIO.setmode(GPIO.BCM)
+    # GPIO.setup(context.RELAY_OUT, GPIO.OUT)  # Relay output
+    # GPIO.setup(context.PIR_IN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # PIR input
+    # # GPIO.setup(context.TEMP_SENSOR, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # DHT22
+    # GPIO.setup(context.GREEN_LED, GPIO.OUT)  # Green LED lit when boiler on
+    # GPIO.setup(context.RED_LED, GPIO.OUT)  # RED LED lit when boiler off
+    # setLED(context, LedColour.AMBER)
+    # relay_off(context)
+
     while True:
         nowTime = datetime.now()
         nowSecs = nowTime.timestamp()
@@ -299,7 +338,9 @@ def runLoop(ctx: StationContext):
         if (nowSecs - ctx.lastTempTime) > ctx.TEMP_PERIOD:
             # Not received a temp update from control for more than a set period - read local
             ctx.lastTempTime = nowSecs
-            (ctx.currentTemp, ctx.currentHumidity) = readTemp(True)
+            # While not getting temp from control station, read locally more regularly
+            ctx.TEMP_PERIOD = ctx.GET_MSG_PERIOD
+            (ctx.currentTemp, ctx.currentHumidity) = readTemp(False)
             if ctx.DEBUG:
                 print(
                     f"Read local temp: {ctx.currentTemp} Humidity: {ctx.currentHumidity}"
@@ -342,7 +383,9 @@ def runLoop(ctx: StationContext):
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: HEAT OFF")
-
+        # relay_on(ctx)
+        # sleep(1)
+        # relay_off(ctx)
         checkPIR(ctx, nowSecs)
         if ctx.pir_stat:
             # Signal for display to be turned on
@@ -373,30 +416,36 @@ if __name__ == "__main__":
     print("Starting thermostat service")
     context: StationContext = StationContext(configFile="./thermostat.ini")
 
-    # Use GPIO numbering, not pin numbering
-    GPIO.setmode(GPIO.BCM)
-    GPIO.setup(context.RELAY_OUT, GPIO.OUT)  # Relay output
-    GPIO.setup(context.PIR_IN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # Relay output
-    GPIO.setup(context.TEMP_SENSOR, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # DHT22
-    GPIO.setup(context.GREEN_LED, GPIO.OUT)  # Green LED lit when boiler on
-    GPIO.setup(context.RED_LED, GPIO.OUT)  # RED LED lit when boiler off
-    setLED(context, LedColour.AMBER)
-
-    # Read temp from DS18B20, which is a quick read on a Pi as its simply reading a file
-    (currentTemp, humidity) = readTemp(True)
+    # # Read temp from DHT22
+    # (currentTemp, humidity) = readTemp(False)
     nowSecs = datetime.now().timestamp()
-    context.lastTempTime = nowSecs
+    context.lastTempTime = 0
     context.lastMessageTime = nowSecs
 
     context.reset = 1
 
+    # # Use GPIO numbering, not pin numbering
+    # GPIO.setmode(GPIO.BCM)
+    # GPIO.setup(context.RELAY_OUT, GPIO.OUT)  # Relay output
+    # GPIO.setup(context.PIR_IN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # PIR input
+    # # GPIO.setup(context.TEMP_SENSOR, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # DHT22
+    # GPIO.setup(context.GREEN_LED, GPIO.OUT)  # Green LED lit when boiler on
+    # GPIO.setup(context.RED_LED, GPIO.OUT)  # RED LED lit when boiler off
+    context.relay = OutputDevice(
+        context.RELAY_OUT, active_high=True, initial_value=False
+    )
+    context.redLED = LED(context.RED_LED)
+    context.greenLED = LED(context.GREEN_LED)
+    context.pir = MotionSensor(context.PIR_IN)
+    setLED(context, LedColour.AMBER)
+    # relay_off(context)
+
     readSchedules(context)
     readHoliday(context)
 
-    relay_off(context)
-
     sleep(5)
+    if context.DEBUG:
+        print("Setup complete")
 
     setLED(context, LedColour.RED)
-
     runLoop(context)

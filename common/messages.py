@@ -271,7 +271,7 @@ class StationContext:
     RELAY_OUT = 27
     PIR_IN = 17
     GREEN_LED = 23
-    RED_LED = 22
+    RED_LED = 24
     TEMP_SENSOR = 18
     TEMP_PERIOD = 60
     PIR_TRIGGER_PERIOD = 30
@@ -284,6 +284,11 @@ class StationContext:
     schedules: {ScheduleElement} = set()
     currentHoliday: Holiday = Holiday()
     config: configparser.ConfigParser = configparser.ConfigParser()
+
+    relay = None
+    redLED = None
+    greenLED = None
+    pir = None
 
     def __init__(self, stn=-1, configFile="") -> None:
         self.stationNo = stn
@@ -302,7 +307,7 @@ class StationContext:
             self.PIR_IN = int(gpio_cfg["PIR_IN"])
             self.GREEN_LED = int(gpio_cfg["GREEN_LED"])
             self.RED_LED = int(gpio_cfg["RED_LED"])
-            self.RED_LED = int(gpio_cfg["TEMP_SENSOR"])
+            self.TEMP_SENSOR = int(gpio_cfg["TEMP_SENSOR"])
 
             timings_cfg = self.config["timings"]
             self.TEMP_PERIOD = int(timings_cfg["TEMP_PERIOD"])

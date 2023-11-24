@@ -1,4 +1,5 @@
 RPi.GPIO
+gpiozero
 requests
 crcmod
 adafruit-dht
