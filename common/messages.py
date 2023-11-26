@@ -65,8 +65,8 @@ class LedColour(Enum):
     OFF = 4
 
 
-LOCAL_SCHEDULE_FILE = "./schedules.json"
-LOCAL_HOLIDAY_FILE = "./holiday.json"
+LOCAL_SCHEDULE_FILE = "./schedules.pickle"
+LOCAL_HOLIDAY_FILE = "./holiday.pickle"
 
 
 class Status(Structure):
@@ -185,12 +185,12 @@ class ScheduleElement:
             self.start = args[1]
             self.end = args[2]
             self.temp = args[3]
-        elif len(args) == 1:
-            load = json.loads(args[0])
-            self.__dict__.update(**load)
+        # elif len(args) == 1:
+        #     load = json.loads(args[0])
+        #     self.__dict__.update(**load)
 
-    def getJson(self):
-        return json.dumps(self.__dict__)
+    # def getJson(self):
+    #     return json.dumps(self.__dict__)
 
 
 class Holiday:
@@ -228,6 +228,7 @@ class Message(LittleEndianStructure):
 
     @staticmethod
     def unpack(msgBytes: bytes):
+        # print(msgBytes)
         return unpack("<BBH", msgBytes)
 
 
@@ -272,13 +273,13 @@ class StationContext:
     PIR_IN = 17
     GREEN_LED = 23
     RED_LED = 24
-    TEMP_SENSOR = 18
-    TEMP_PERIOD = 60
+    TEMP_SENSOR: int = 18
+    TEMP_PERIOD: int = 60
     PIR_TRIGGER_PERIOD = 30
-    HYSTERISIS = 0.2
+    HYSTERISIS: float = 0.2
     GET_MSG_PERIOD = 15
     DEFAULT_TEMP = 10.0
-    SET_TEMP_PERIOD = 3600
+    SET_TEMP_PERIOD: int = 3600
     DEBUG = False
 
     schedules: {ScheduleElement} = set()

@@ -1,8 +1,10 @@
 import sys
+from os import path, remove
 
 from datetime import datetime
 from time import sleep
 import requests
+import pickle
 
 # import RPi.GPIO as GPIO
 # import board
@@ -26,7 +28,7 @@ from common.messages import *
 # &r=< mins to set temp, 0 off>
 # &p=<1 sensor triggered, 0 sensor off>
 def sendMessage(ctx: StationContext):
-    url_parts = [f"{ctx.controlstation_url}/message?s={ctx.station_num}&u=1"]
+    url_parts = [f"{ctx.controlstation_url}/message?s={ctx.station_num}"]
     if ctx.reset:
         url_parts.append("&rs=1")
         ctx.reset = False
@@ -37,6 +39,7 @@ def sendMessage(ctx: StationContext):
     url_parts.append(f"&h={ctx.currentHumidity*10}")
     url_parts.append(f"&st={ctx.currentSetTemp*10}")
     url_parts.append(f"&r={ctx.heat_on}")
+    url_parts.append(f"&u={0}")
     url = "".join(url_parts)
     chgState = False
     # Send HTTP request with a 5 sec timeout
@@ -57,32 +60,43 @@ def sendMessage(ctx: StationContext):
     return chgState
 
 
-def newSetTempMsg(ctx: StationContext, msgBytes: bytearray):
-    tempMsg = Temp(msgBytes)
-    ctx.currentSetTemp = tempMsg.temp
+def newSetTempMsg(ctx: StationContext, msgBytes: bytes):
+    tempMsg = Temp.unpack(msgBytes)
+    ctx.currentSetTemp = tempMsg.temp / 10
     ctx.setTempTime = datetime.now().timestamp()
+    if ctx.DEBUG:
+        print(f"Received Set thermostat temp {ctx.currentSetTemp}C")
     return True
 
 
-def extTempMsg(ctx: StationContext, msgBytes: bytearray):
-    extMsg = SetExt(msgBytes)
-    ctx.currentExtTemp = extMsg.setExt
+def extTempMsg(ctx: StationContext, msgBytes: bytes):
+    extMsg = SetExt.unpack(msgBytes)
+    ctx.currentExtTemp = extMsg.setExt / 10
     ctx.windStr = str(extMsg.windStr)
+    if ctx.DEBUG:
+        print(f"Received Ext temp {ctx.currentExtTemp}C , wind {ctx.windStr}")
     return True
 
 
-def setCurrentTempMsg(ctx: StationContext, msgBytes: bytearray):
-    tempMsg = Temp(msgBytes)
-    ctx.currentTemp = tempMsg.temp
-    ctx.TEMP_PERIOD = ctx.config["timings"]["TEMP_PERIOD"]
+def setCurrentTempMsg(ctx: StationContext, msgBytes: bytes):
+    tempMsg = Temp.unpack(msgBytes)
+    ctx.currentTemp = tempMsg.temp / 10.0
+    ctx.currentHumidity = tempMsg.humidity / 10.0
+    ctx.TEMP_PERIOD = int(ctx.config["timings"]["TEMP_PERIOD"])
     ctx.lastTempTime = datetime.now().timestamp()
-    return True
+    if ctx.DEBUG:
+        print(
+            f"Received current temp {ctx.currentTemp}C, humidity {ctx.currentHumidity}"
+        )
+    return False
 
 
-def setScheduleMsg(ctx: StationContext, msgBytes: bytearray):
-    sched = SchedByElem(msgBytes)
+def setScheduleMsg(ctx: StationContext, msgBytes: bytes):
+    sched = SchedByElem.unpack(msgBytes)
     elem = ScheduleElement(sched.day, sched.start, sched.end, sched.temp)
-    ctx.schedules.append(elem)
+    ctx.schedules.add(elem)
+    if ctx.DEBUG:
+        print(f"Received schedule {elem} total schedules: {len(ctx.schedules)}")
     saveSchedules(ctx)
     # Return true as will be receiving new schedules
     return True
@@ -90,72 +104,76 @@ def setScheduleMsg(ctx: StationContext, msgBytes: bytearray):
 
 def deleteAllSchedulesMsg(ctx: StationContext):
     ctx.schedules = set()
-    saveSchedules(ctx)
+    if path.exists(LOCAL_SCHEDULE_FILE):
+        remove(LOCAL_SCHEDULE_FILE)
+    if ctx.DEBUG:
+        print("Deleted all schedules")
+
     # Return true as will be receiving new schedules
     return True
 
 
 def readSchedules(ctx: StationContext):
     # Read file containing locally saved schedules
-    try:
-        fp = open(LOCAL_SCHEDULE_FILE, "r", encoding="UTF-8")
-        ctx.schedules = json.load(fp)
-        fp.close()
-    except FileNotFoundError:
+    if path.exists(LOCAL_SCHEDULE_FILE):
+        with open(LOCAL_SCHEDULE_FILE, "rb") as fp:
+            ctx.schedules = pickle.load(fp)
+    else:
         print(f"Locally saved schedule file {LOCAL_SCHEDULE_FILE} not found ")
 
 
 def saveSchedules(ctx: StationContext):
-    try:
-        fp = open(LOCAL_SCHEDULE_FILE, "w", encoding="UTF-8")
-        json.dump(ctx.schedules, fp)
-        fp.close()
-    except:
-        print(f"Failed to save schedules to {LOCAL_SCHEDULE_FILE}: {sys.exc_info()[0]}")
+    # try:
+    with open(LOCAL_SCHEDULE_FILE, "wb") as fp:
+        pickle.dump(ctx.schedules, fp)
+    # except:
+    #     print(f"Failed to save schedules to {LOCAL_SCHEDULE_FILE}: {sys.exc_info()[0]}")
 
 
-def setHolidayMsg(ctx: StationContext, msgBytes: bytearray):
-    hols = HolidayStr(msgBytes)
+def setHolidayMsg(ctx: StationContext, msgBytes: bytes):
+    hols = HolidayStr.unpack(msgBytes)
     holiday = Holiday()
-    holiday.startDate = datetime.datetime(
-        hols.startdate.year,
-        hols.startdate.month,
-        hols.startdate.dayOfMonth,
-        hols.startdate.hour,
-    ).timestamp
-    holiday.endDate = datetime.datetime(
-        hols.endDate.year,
+    holiday.startDate = datetime(
+        hols.startDate.year + 2000,
+        hols.startDate.month,
+        hols.startDate.dayOfMonth,
+        hols.startDate.hour,
+    ).timestamp()
+    holiday.endDate = datetime(
+        hols.endDate.year + 2000,
         hols.endDate.month,
         hols.endDate.dayOfMonth,
         hols.endDate.hour,
-    ).timestamp
+    ).timestamp()
     holiday.temp = hols.temp / 10.0
     ctx.currentHoliday = holiday
-    return False
+    saveHoliday(ctx)
+    if ctx.DEBUG:
+        print(f"Received new holiday: {hols}")
+    return True
 
 
 def readHoliday(ctx: StationContext):
     # Read file containing locally saved holiday
-    try:
-        fp = open(LOCAL_HOLIDAY_FILE, "r", encoding="UTF-8")
-        ctx.currentHoliday = json.load(fp)
-        fp.close()
-    except FileNotFoundError:
+    if path.exists(LOCAL_HOLIDAY_FILE):
+        with open(LOCAL_HOLIDAY_FILE, "rb") as fp:
+            ctx.currentHoliday = pickle.load(fp)
+    else:
         print(f"Locally saved holiday file {LOCAL_HOLIDAY_FILE} not found ")
 
 
 def saveHoliday(ctx: StationContext):
-    try:
-        fp = open(LOCAL_HOLIDAY_FILE, "w", encoding="UTF-8")
-        json.dump(ctx.schcurrentHolidayedules, fp)
-        fp.close()
-    except:
-        print(f"Failed to save holiday to {LOCAL_HOLIDAY_FILE}: {sys.exc_info()[0]}")
+    with open(LOCAL_HOLIDAY_FILE, "wb") as fp:
+        pickle.dump(ctx.currentHoliday, fp)
+    fp.close()
+    # except:
+    #     print(f"Failed to save holiday to {LOCAL_HOLIDAY_FILE}: {sys.exc_info()[0]}")
 
 
 def processResponseMsg(ctx: StationContext, resp: requests.Response):
     respContent: bytes = resp.content
-    (msgId, mlen, crc) = Message.unpack(respContent)
+    headerBytes: bytes = respContent[0:4]
+    (msgId, mlen, crc) = Message.unpack(headerBytes)
     msgBytes = bytearray(respContent)
     msgBytes[2:3] = b"\x00"
     msgBytes[3:4] = b"\x00"
@@ -168,23 +186,26 @@ def processResponseMsg(ctx: StationContext, resp: requests.Response):
             f"Failed to receive correct CRC for message: {respContent} Bytes: {msgBytes} Calc-CRC: {calc_crc:X} rx-CRC: {crc:X}"
         )
     else:
-        msgBytes = bytearray()
+        msgArray = bytearray()
         for i in range(4, mlen):
-            msgBytes.append(respContent[i])
+            msgArray.append(respContent[i])
+        msgBytes: bytes = bytes(msgArray)
         if msgId == REQ_STATUS_MSG:
             chgState = True
         elif msgId == SET_TEMP_MSG:
-            newSetTempMsg(ctx, msgBytes)
+            chgState = newSetTempMsg(ctx, msgBytes)
         elif msgId == SET_EXT_MSG:
-            extTempMsg(ctx, msgBytes)
+            chgState = extTempMsg(ctx, msgBytes)
         elif msgId == SCHEDULE_MSG:
-            setScheduleMsg(ctx, msgBytes)
+            chgState = setScheduleMsg(ctx, msgBytes)
         elif msgId == DELETE_ALL_SCHEDULES_MSG:
-            deleteAllSchedulesMsg(ctx)
+            chgState = deleteAllSchedulesMsg(ctx)
         elif msgId == SET_HOLIDAY_MSG:
-            setHolidayMsg(ctx, msgBytes)
+            chgState = setHolidayMsg(ctx, msgBytes)
         elif msgId == SET_THERM_TEMP_MSG:
-            setCurrentTempMsg(ctx, msgBytes)
+            chgState = setCurrentTempMsg(ctx, msgBytes)
+        elif msgId == MOTD_MSG:
+            print(f"Need to implement Motd {msgBytes}")
         else:
             print(f"Ignoring un-implemented msg {msgId}")
         return chgState
@@ -305,8 +326,8 @@ def checkPIR(ctx: StationContext, nowSecs: float):
     # GPIO.setmode(GPIO.BCM)
     # status = not GPIO.input(ctx.PIR_IN)
     status = ctx.pir.value
-    if ctx.DEBUG:
-        print(f"PIR: {'ON' if status else 'OFF'}")
+    # if ctx.DEBUG:
+    #     print(f"PIR: {'ON' if status else 'OFF'}")
     if status:
         ctx.lastPirTime = nowSecs
         ctx.pir_stat = 1
@@ -420,7 +441,7 @@ if __name__ == "__main__":
     # (currentTemp, humidity) = readTemp(False)
     nowSecs = datetime.now().timestamp()
     context.lastTempTime = 0
-    context.lastMessageTime = nowSecs
+    context.lastMessageTime = 0
 
     context.reset = 1
 

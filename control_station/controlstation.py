@@ -15,7 +15,7 @@ from filelock import FileLock, Timeout
 
 from common.messages import *
 
-from capture_camera import monitorAndRecord
+# from capture_camera import monitorAndRecord
 from common.humidity_sensor import readTemp
 
 
@@ -128,8 +128,8 @@ def setup():
         if lock.acquire(1):
             print("Starting monitoring threads")
             # Only one thread gets the lock
-            cameraProcess = Process(target=monitorAndRecord, daemon=False)
-            cameraProcess.start()
+            # cameraProcess = Process(target=monitorAndRecord, daemon=False)
+            # cameraProcess.start()
             monitorScriptProcess = Process(target=runMonitorScript, daemon=True)
             monitorScriptProcess.start()
             sleep(10)
@@ -157,7 +157,7 @@ def getMessageEnvelope(mid, content: bytearray, mlen):
     # msg.crc = short(crc + 2**16).to_bytes(2, 'little')
     # msg.crc = crc.to_bytes(2, 'little')
     msg.crc = crc
-    return bytearray(msg) + content
+    return bytes(bytearray(msg) + content)
 
 
 def retrieveTempValue(primary, secondary):
@@ -281,6 +281,7 @@ def getMessage():
     response: Response = getNoMessage()
     updateOnly = args.get("u", type=int, default=0)
     if not updateOnly:
+        # print(f"Station: {stn} Getting next message")
         if sc.motdExpiry < TEMP_MOTD_EXPIRY_SECS:
             sc.motdExpiry = TEMP_MOTD_EXPIRY_SECS  # Have a minimum expiry time
 
@@ -365,7 +366,7 @@ def getDateTime():
     msgBytes = getMessageEnvelope(
         SET_DATE_TIME_MSG, bytearray(dt), sizeof(DateTimeStruct)
     )
-    print(f"DateTime msg")
+    # print(f"DateTime msg")
 
     return Response(response=msgBytes, mimetype="application/octet-stream")
 
@@ -434,8 +435,8 @@ def createMotd(str, motdExpiry=TEMP_MOTD_EXPIRY_SECS * 1000):
     motd = Motd()
     motd.motdStr = motdStr
     motd.expiry = motdExpiry
-    print(f"Motd: {motd.motdStr} Expiry: {motd.expiry}")
-    print(f"String Len: {motdLen} Len of content: {sizeof(Motd)}")
+    # print(f"Motd: {motd.motdStr} Expiry: {motd.expiry}")
+    # print(f"String Len: {motdLen} Len of content: {sizeof(Motd)}")
     msgBytes = getMessageEnvelope(MOTD_MSG, bytearray(motd), sizeof(Motd))
     return Response(response=msgBytes, mimetype="application/octet-stream")
 
@@ -464,7 +465,7 @@ def getSetTemp(sc: StationContext = None):
                 # print(f"Set temp str {str[:strLen-1]}")
                 temp = c_int16(int(float(tempStr) * 10))
                 tempMsg.temp = temp
-                print(f"Set Temp {temp}")
+                # print(f"Set Temp {temp}")
                 msgBytes = getMessageEnvelope(
                     SET_TEMP_MSG, bytearray(tempMsg), sizeof(Temp)
                 )
@@ -480,7 +481,7 @@ def getSetTemp(sc: StationContext = None):
                 print(f"Set Temp: Failed")
                 pass
     if not gotTemp:
-        # print(f"No set temp file")
+        print(f"No set temp file")
         response = getNoMessage()
     if changed:
         sc.saveStationContext()
@@ -513,13 +514,13 @@ def getExtTemp(sc: StationContext = None):
                 strLen = len(str)
                 extMsg.setExt = c_int16(int(float(str[: strLen - 1]) * 10))
                 sc.currentExtTemp = extMsg.setExt
-                print(f"Ext Temp {extMsg.setExt}")
+                # print(f"Ext Temp {extMsg.setExt}")
                 str = f.readline()
                 strLen = len(str)
                 if strLen > MAX_WIND_SIZE:
                     strLen = MAX_WIND_SIZE
                 extMsg.windStr = bytes(str[: strLen - 1], encoding="utf-8")
-                print(f"Wind str {extMsg.windStr}")
+                # print(f"Wind str {extMsg.windStr}")
                 msgBytes = getMessageEnvelope(
                     SET_EXT_MSG, bytearray(extMsg), sizeof(SetExt)
                 )
@@ -535,7 +536,7 @@ def getExtTemp(sc: StationContext = None):
                 pass
     if not gotExt:
         print(f"No ext temp file")
-        currentExtTemp = 1000.0
+        sc.currentExtTemp = 1000.0
         response = getNoMessage()
     if changed:
         sc.saveStationContext()

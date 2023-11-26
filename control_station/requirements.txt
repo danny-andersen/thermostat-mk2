@@ -3,5 +3,16 @@ pigpio
 gpiozero
 adafruit-dht
 adafruit-circuitpython-dht
+filelock
 requests
 crcmod
+beautifulsoup4
+bs4
+Flask
+html5lib
+lxml
+picamera
+picamera2
+uWSGI
+
+
