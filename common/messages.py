@@ -128,6 +128,7 @@ class DateTimeStruct(LittleEndianStructure):
 
 class HolidayDateStr(Structure):
     _fields_ = [
+        ("min", c_ubyte),
         ("hour", c_ubyte),
         ("dayOfMonth", c_ubyte),
         ("month", c_ubyte),
@@ -136,8 +137,8 @@ class HolidayDateStr(Structure):
 
     @staticmethod
     def unpack(msgBytes: bytes):
-        (h, d, m, y) = unpack("<BBBB", msgBytes)
-        return HolidayDateStr(h, d, m, y)
+        (minute, h, d, m, y) = unpack("<BBBBB", msgBytes)
+        return HolidayDateStr(minute, h, d, m, y)
 
 
 class HolidayStr(Structure):
@@ -150,9 +151,9 @@ class HolidayStr(Structure):
 
     @staticmethod
     def unpack(msgBytes: bytes):
-        sd = HolidayDateStr.unpack(msgBytes[0:4])
-        ed = HolidayDateStr.unpack(msgBytes[4:8])
-        (t, v) = unpack("<hB", msgBytes[8:11])
+        sd = HolidayDateStr.unpack(msgBytes[0:5])
+        ed = HolidayDateStr.unpack(msgBytes[5:10])
+        (t, v) = unpack("<hB", msgBytes[10:13])
         return HolidayStr(sd, ed, t, v)
 
 
@@ -245,6 +246,9 @@ class StationContext:
     tempMotd: str = None
     tempMotdTime = 0
     currentSetTemp: float = -1000.0  # current set temp
+    currentManSetTemp: float = (
+        -1000.0
+    )  # current set temp set from control or on thermostat
     currentBoilerStatus = 0.0  # off
     currentPirStatus = 0  # off
     currentTemp: float = -100.0

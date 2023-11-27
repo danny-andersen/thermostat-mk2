@@ -100,6 +100,8 @@ def runMonitorScript():
     print(f"******Starting monitor script thread loop {MONITOR_SCRIPT}")
     lastTempTime = 0
     lastMonitorTime = 0
+    remove(TEMPERATURE_FILE_NEW)
+    remove(HUMIDITY_FILE_NEW)
     sleep(15)
     history: tuple[dict[int, float], dict[int, float]] = (dict(), dict())
     # Wait until server up and running
@@ -589,6 +591,10 @@ def getHoliday(sc: StationContext = None):
                     startDate.month = int(start[2])
                     startDate.dayOfMonth = int(start[3])
                     startDate.hour = int(start[4])
+                    if len(start) == 6:
+                        startDate.min = int(start[5])
+                    else:
+                        startDate.min = 0
                     str = f.readline()
                     end = str.split(",")
                     if "End" in end[0]:
@@ -597,6 +603,10 @@ def getHoliday(sc: StationContext = None):
                         endDate.month = int(end[2])
                         endDate.dayOfMonth = int(end[3])
                         endDate.hour = int(end[4])
+                        if len(end) == 6:
+                            endDate.min = int(end[5])
+                        else:
+                            endDate.min = 0
                         str = f.readline()
                         temp = str.split(",")
                         if "Temp" in temp[0]:

@@ -138,18 +138,22 @@ def setHolidayMsg(ctx: StationContext, msgBytes: bytes):
         hols.startDate.month,
         hols.startDate.dayOfMonth,
         hols.startDate.hour,
+        hols.startDate.min,
     ).timestamp()
     holiday.endDate = datetime(
         hols.endDate.year + 2000,
         hols.endDate.month,
         hols.endDate.dayOfMonth,
         hols.endDate.hour,
+        hols.endDate.min,
     ).timestamp()
     holiday.temp = hols.temp / 10.0
     ctx.currentHoliday = holiday
     saveHoliday(ctx)
     if ctx.DEBUG:
-        print(f"Received new holiday: {hols}")
+        print(
+            f"Received new holiday: start: {datetime.fromtimestamp(holiday.startDate)} end: {datetime.fromtimestamp(holiday.endDate)}"
+        )
     return True
 
 
@@ -369,36 +373,38 @@ def runLoop(ctx: StationContext):
 
         if (nowSecs - ctx.setTempTime) > ctx.SET_TEMP_PERIOD:
             # Manually set temp has expired
-            ctx.currentSetTemp = -100
+            ctx.currentManSetTemp = -100
             ctx.setTempTime = nowSecs
         schedSetTemp = retrieveScheduledSetTemp(ctx, nowTime)
         holidayTemp = checkOnHoliday(ctx, nowSecs)
         # We have three set temperatures:
-        # currentSetTemp is one that has been set onscreen or sent remotely
+        # currentManSetTemp is one that has been set onscreen or sent remotely
         # schedSetTemp is one from the current schedule
         # holidayTemp is set if we are in a holiday period
         # Precedence: currentSetTemp > holidayTemp > schedSetTemp
-        if ctx.currentSetTemp != -100:
-            setTemp = ctx.currentSetTemp
+        if ctx.currentManSetTemp != -100:
+            ctx.currentSetTemp = ctx.currentManSetTemp
         elif holidayTemp != -100:
-            setTemp = holidayTemp
+            ctx.currentSetTemp = holidayTemp
         elif schedSetTemp != -100:
-            setTemp = schedSetTemp
+            ctx.currentSetTemp = schedSetTemp
         else:
-            setTemp = ctx.DEFAULT_TEMP
+            ctx.currentSetTemp = ctx.DEFAULT_TEMP
 
         if ctx.DEBUG:
             print(
-                f"{nowTime}: Calculated Set temp: {setTemp} Sched temp: {schedSetTemp} Holiday temp: {holidayTemp} Current Temp: {ctx.currentTemp}\n"
+                f"{nowTime}: Calculated Set temp: {ctx.currentSetTemp} Sched temp: {schedSetTemp} Holiday temp: {holidayTemp} Current Temp: {ctx.currentTemp}\n"
             )
-        if not ctx.heat_on and (ctx.currentTemp < setTemp and ctx.currentTemp != -100):
+        if not ctx.heat_on and (
+            ctx.currentTemp < ctx.currentSetTemp and ctx.currentTemp != -100
+        ):
             # Only turn on heating if have a valid temp reading
             relay_on(ctx)
             ctx.heat_on = True
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: HEAT ON")
-        elif ctx.heat_on and ctx.currentTemp > (setTemp + ctx.HYSTERISIS):
+        elif ctx.heat_on and ctx.currentTemp > (ctx.currentSetTemp + ctx.HYSTERISIS):
             relay_off(ctx)
             ctx.heat_on = False
             chgState = True
