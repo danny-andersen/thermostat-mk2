@@ -4,6 +4,7 @@ import json
 from struct import unpack
 from enum import Enum
 import configparser
+from datetime import datetime
 
 
 MAX_MESSAGE_SIZE = 128
@@ -66,7 +67,7 @@ class LedColour(Enum):
 
 
 LOCAL_SCHEDULE_FILE = "./schedules.pickle"
-LOCAL_HOLIDAY_FILE = "./holiday.pickle"
+LOCAL_HOLIDAY_FILE = "./holiday.txt"
 
 
 class Status(Structure):
@@ -156,6 +157,93 @@ class HolidayStr(Structure):
         (t, v) = unpack("<hB", msgBytes[10:13])
         return HolidayStr(sd, ed, t, v)
 
+    @staticmethod
+    def loadFromFile(filename: str):
+        holiday = None
+        if path.exists(filename):
+            with open(filename, "r", encoding="utf-8") as f:
+                try:
+                    linestr = f.readline()
+                    start = linestr.split(",")
+                    if "Start" in start[0]:
+                        sd = HolidayDateStr()
+                        sd.year = int(start[1])
+                        sd.month = int(start[2])
+                        sd.dayOfMonth = int(start[3])
+                        sd.hour = int(start[4])
+                        if len(start) == 6:
+                            sd.min = int(start[5])
+                        else:
+                            sd.min = 0
+                        linestr = f.readline()
+                        end = linestr.split(",")
+                        if "End" in end[0]:
+                            ed = HolidayDateStr()
+                            ed.year = int(end[1])
+                            ed.month = int(end[2])
+                            ed.dayOfMonth = int(end[3])
+                            ed.hour = int(end[4])
+                            if len(end) == 6:
+                                ed.min = int(end[5])
+                            else:
+                                ed.min = 0
+                            linestr = f.readline()
+                            temp = linestr.split(",")
+                            if "Temp" in temp[0]:
+                                holiday = HolidayStr()
+                                holiday.startDate = sd
+                                holiday.endDate = ed
+                                holiday.temp = c_int16(int(float(temp[1]) * 10))
+                                holiday.valid = 1
+                except TypeError as error:
+                    print(f"Set Holiday: Failed: {error}")
+                    pass
+        return holiday
+
+    @staticmethod
+    def saveToFile(filename: str, hols):
+        with open(filename, "w", encoding="utf-8") as f:
+            dt: HolidayDateStr = hols.startDate
+            f.write(f"Start,{dt.year},{dt.month},{dt.dayOfMonth},{dt.hour},{dt.min}\n")
+            dt: HolidayDateStr = hols.endDate
+            f.write(f"End,{dt.year},{dt.month},{dt.dayOfMonth},{dt.hour},{dt.min}\n")
+            f.write(f"Temp,{hols.temp}\n")
+
+
+class Holiday:
+    startDate: float = 0.0
+    endDate: float = 0.0
+    temp: float = 10.0
+
+    def __init__(self, *args):
+        if len(args) == 3:
+            self.startDate = args[0]
+            self.endDate = args[1]
+            self.temp = args[2]
+        elif len(args) == 1:
+            if args[0]:
+                hols = args[0]
+                self.startDate = datetime(
+                    hols.startDate.year + 2000,
+                    hols.startDate.month,
+                    hols.startDate.dayOfMonth,
+                    hols.startDate.hour,
+                    hols.startDate.min,
+                ).timestamp()
+                self.endDate = datetime(
+                    hols.endDate.year + 2000,
+                    hols.endDate.month,
+                    hols.endDate.dayOfMonth,
+                    hols.endDate.hour,
+                    hols.endDate.min,
+                ).timestamp()
+                self.temp = hols.temp / 10.0
+            # load = json.loads(args[0])
+            # self.__dict__.update(**load)
+
+    # def getJson(self):
+    #     return json.dumps(self.__dict__)
+
 
 # Struct is long word padded...
 class SchedByElem(LittleEndianStructure):
@@ -192,24 +280,6 @@ class ScheduleElement:
 
     # def getJson(self):
     #     return json.dumps(self.__dict__)
-
-
-class Holiday:
-    startDate: float = 0.0
-    endDate: float = 0.0
-    temp: float = 10.0
-
-    def __init__(self, *args):
-        if len(args) == 3:
-            self.startDate = args[0]
-            self.endDate = args[1]
-            self.temp = args[2]
-        elif len(args) == 1:
-            load = json.loads(args[0])
-            self.__dict__.update(**load)
-
-    def getJson(self):
-        return json.dumps(self.__dict__)
 
 
 # class Schedules:

@@ -564,7 +564,6 @@ def getThermTemp(sc: StationContext = StationContext()):
 
 @app.route("/holiday", methods=["POST", "GET"])
 def getHoliday(sc: StationContext = None):
-    gotHoliday = False
     response: Response = None
     readSC = False
     changed = False
@@ -578,58 +577,19 @@ def getHoliday(sc: StationContext = None):
             # No station number given - use default context
             sc: StationContext = StationContext()
     checkAndDeleteFile(HOLIDAY_FILE, SET_TEMP_EXPIRY_SECS)
-    if path.exists(HOLIDAY_FILE):
-        with open(HOLIDAY_FILE, "r", encoding="utf-8") as f:
-            try:
-                str = f.readline()
-                start = str.split(",")
-                if readSC:
-                    changed = True
-                if "Start" in start[0]:
-                    startDate = HolidayDateStr()
-                    startDate.year = int(start[1])
-                    startDate.month = int(start[2])
-                    startDate.dayOfMonth = int(start[3])
-                    startDate.hour = int(start[4])
-                    if len(start) == 6:
-                        startDate.min = int(start[5])
-                    else:
-                        startDate.min = 0
-                    str = f.readline()
-                    end = str.split(",")
-                    if "End" in end[0]:
-                        endDate = HolidayDateStr()
-                        endDate.year = int(end[1])
-                        endDate.month = int(end[2])
-                        endDate.dayOfMonth = int(end[3])
-                        endDate.hour = int(end[4])
-                        if len(end) == 6:
-                            endDate.min = int(end[5])
-                        else:
-                            endDate.min = 0
-                        str = f.readline()
-                        temp = str.split(",")
-                        if "Temp" in temp[0]:
-                            holiday = HolidayStr()
-                            holiday.startDate = startDate
-                            holiday.endDate = endDate
-                            holiday.temp = c_int16(int(float(temp[1]) * 10))
-                            holiday.valid = 1
-                            msgBytes = getMessageEnvelope(
-                                SET_HOLIDAY_MSG, bytearray(holiday), sizeof(HolidayStr)
-                            )
-                            response = Response(
-                                response=msgBytes, mimetype="application/octet-stream"
-                            )
-                            gotHoliday = True
-                            sc.setHolidayTime = stat(HOLIDAY_FILE).st_mtime + 1
-                            print(f"Holiday msg")
-                            sc.tempMotd = f"New Hols: St:{startDate.dayOfMonth}/{startDate.month} {startDate.hour} To:{endDate.dayOfMonth}/{endDate.month} {endDate.hour}"
-            except TypeError as error:
-                print(f"Set Holiday: Failed: {error}")
-                pass
-    if not gotHoliday:
-        print(f"No holiday file")
+    holiday = HolidayStr.loadFromFile(HOLIDAY_FILE)
+    if holiday:
+        if readSC:
+            changed = True
+        msgBytes = getMessageEnvelope(
+            SET_HOLIDAY_MSG, bytearray(holiday), sizeof(HolidayStr)
+        )
+        response = Response(response=msgBytes, mimetype="application/octet-stream")
+        sc.setHolidayTime = stat(HOLIDAY_FILE).st_mtime + 1
+        sc.tempMotd = f"New Hols: St:{holiday.startDate.dayOfMonth}/{holiday.startDate.month} {holiday.startDate.hour}:{holiday.startDate.min} To:{holiday.endDate.dayOfMonth}/{holiday.endDate.month} {holiday.endDate.hour}:{holiday.endDate.min}"
+        print(f"Holiday msg: {sc.tempMotd}")
+    else:
+        print("No holiday file")
         response = getNoMessage()
     if changed:
         sc.saveStationContext()
@@ -648,10 +608,10 @@ def createScheduleMsgs(sc: StationContext):
         with open(SCHEDULE_FILE, "r", encoding="utf-8") as f:
             messages.append(None)
             try:
-                for str in f:
+                for linestr in f:
                     # Read line, split by "," then process + create one message per line (schedule)
                     schedMsg: ScheduleElement = ScheduleElement()
-                    sched = str.split(",")
+                    sched = linestr.split(",")
                     schedMsg.day = 0xFF
                     if "Mon-Sun" in sched[0]:
                         schedMsg.day = 0x0000

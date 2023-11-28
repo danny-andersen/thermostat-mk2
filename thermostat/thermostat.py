@@ -131,25 +131,10 @@ def saveSchedules(ctx: StationContext):
 
 
 def setHolidayMsg(ctx: StationContext, msgBytes: bytes):
-    hols = HolidayStr.unpack(msgBytes)
-    holiday = Holiday()
-    holiday.startDate = datetime(
-        hols.startDate.year + 2000,
-        hols.startDate.month,
-        hols.startDate.dayOfMonth,
-        hols.startDate.hour,
-        hols.startDate.min,
-    ).timestamp()
-    holiday.endDate = datetime(
-        hols.endDate.year + 2000,
-        hols.endDate.month,
-        hols.endDate.dayOfMonth,
-        hols.endDate.hour,
-        hols.endDate.min,
-    ).timestamp()
-    holiday.temp = hols.temp / 10.0
+    hols: HolidayStr = HolidayStr.unpack(msgBytes)
+    holiday: Holiday = Holiday(hols)
     ctx.currentHoliday = holiday
-    saveHoliday(ctx)
+    HolidayStr.saveToFile(LOCAL_HOLIDAY_FILE, hols)
     if ctx.DEBUG:
         print(
             f"Received new holiday: start: {datetime.fromtimestamp(holiday.startDate)} end: {datetime.fromtimestamp(holiday.endDate)}"
@@ -159,19 +144,21 @@ def setHolidayMsg(ctx: StationContext, msgBytes: bytes):
 
 def readHoliday(ctx: StationContext):
     # Read file containing locally saved holiday
-    if path.exists(LOCAL_HOLIDAY_FILE):
-        with open(LOCAL_HOLIDAY_FILE, "rb") as fp:
-            ctx.currentHoliday = pickle.load(fp)
-    else:
-        print(f"Locally saved holiday file {LOCAL_HOLIDAY_FILE} not found ")
+    hols = HolidayStr.loadFromFile(LOCAL_HOLIDAY_FILE)
+    ctx.currentHoliday = Holiday(hols)
+    # if path.exists(LOCAL_HOLIDAY_FILE):
+    #     with open(LOCAL_HOLIDAY_FILE, "rb") as fp:
+    #         ctx.currentHoliday = pickle.load(fp)
+    # else:
+    #     print(f"Locally saved holiday file {LOCAL_HOLIDAY_FILE} not found ")
 
 
-def saveHoliday(ctx: StationContext):
-    with open(LOCAL_HOLIDAY_FILE, "wb") as fp:
-        pickle.dump(ctx.currentHoliday, fp)
-    fp.close()
-    # except:
-    #     print(f"Failed to save holiday to {LOCAL_HOLIDAY_FILE}: {sys.exc_info()[0]}")
+# def saveHoliday(ctx: StationContext):
+#     with open(LOCAL_HOLIDAY_FILE, "wb") as fp:
+#         pickle.dump(ctx.currentHoliday, fp)
+#     fp.close()
+#     # except:
+#     #     print(f"Failed to save holiday to {LOCAL_HOLIDAY_FILE}: {sys.exc_info()[0]}")
 
 
 def processResponseMsg(ctx: StationContext, resp: requests.Response):
