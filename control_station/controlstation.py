@@ -244,7 +244,7 @@ def getMessage():
     args = request.args
     stn = args.get("s", type=int)
     if stn:
-        sc: StationContext = StationContext(stn)
+        sc: StationContext = StationContext.getSavedContext(stn)
     else:
         # No station number given - use default context
         sc: StationContext = StationContext()
@@ -600,57 +600,12 @@ def getHoliday(sc: StationContext = None):
 
 def createScheduleMsgs(sc: StationContext):
     # Create a list of schedule messages to replace the existing schedules
-    messages: list[str] = []
 
     checkAndDeleteFile(SCHEDULE_FILE, SET_SCHED_EXPIRY_SECS)
     if path.exists(SCHEDULE_FILE):
         sc.setSchedTime = stat(SCHEDULE_FILE).st_mtime + 1
-        with open(SCHEDULE_FILE, "r", encoding="utf-8") as f:
-            messages.append(None)
-            try:
-                for linestr in f:
-                    # Read line, split by "," then process + create one message per line (schedule)
-                    schedMsg: ScheduleElement = ScheduleElement()
-                    sched = linestr.split(",")
-                    schedMsg.day = 0xFF
-                    if "Mon-Sun" in sched[0]:
-                        schedMsg.day = 0x0000
-                    elif "Mon-Fri" in sched[0]:
-                        schedMsg.day = 0x0100
-                    elif "Sat-Sun" in sched[0]:
-                        schedMsg.day = 0x0200
-                    elif "Sun" in sched[0]:
-                        schedMsg.day = 0x0007
-                    elif "Mon" in sched[0]:
-                        schedMsg.day = 0x0001
-                    elif "Tue" in sched[0]:
-                        schedMsg.day = 0x0002
-                    elif "Wed" in sched[0]:
-                        schedMsg.day = 0x0003
-                    elif "Thu" in sched[0]:
-                        schedMsg.day = 0x0004
-                    elif "Fri" in sched[0]:
-                        schedMsg.day = 0x0005
-                    elif "Sat" in sched[0]:
-                        schedMsg.day = 0x0006
-                    else:
-                        print(f"Unidentified Day specified in schedule: {str}")
-                    if schedMsg.day != 0xFF:
-                        shours = int(sched[1][0:2])
-                        smins = int(sched[1][2:4])
-                        schedMsg.start = shours * 60 + smins
-                        ehours = int(sched[2][0:2])
-                        emins = int(sched[2][2:4])
-                        schedMsg.end = ehours * 60 + emins
-                        temp = float(sched[3]) * 10
-                        schedMsg.temp = int(temp)
-                        messages.append(schedMsg.getJson())
-                        # print(f"Schedule: Day: {schedMsg.day} Start: {schedMsg.start}, End: {schedMsg.end}, Temp: {schedMsg.temp}\n")
-            except:
-                print(f"Processing schedule file failed")
-                messages = []
-                pass
 
+    messages = ScheduleElement.loadSchedulesFromFile(SCHEDULE_FILE)
     noMsgs = len(messages)
     if noMsgs <= 1:
         # File was empty - dont send the delete message
@@ -664,17 +619,12 @@ def createScheduleMsgs(sc: StationContext):
 
 
 def getNextScheduleMsg(sc: StationContext):
-    schedStr = sc.scheduleMsgs[0]
-    if schedStr == None:
+    sched = sc.scheduleMsgs[0]
+    if sched == None:
         # First delete all schedules
         msgBytes = getMessageEnvelope(DELETE_ALL_SCHEDULES_MSG, bytearray(0), 0)
     else:
-        sched: ScheduleElement = ScheduleElement(schedStr)
-        schedMsg: SchedByElem = SchedByElem()
-        schedMsg.day = sched.day
-        schedMsg.start = sched.start
-        schedMsg.end = sched.end
-        schedMsg.temp = sched.temp
+        schedMsg: SchedByElem = SchedByElem(sched)
         msgBytes = getMessageEnvelope(
             SCHEDULE_MSG, bytearray(schedMsg), sizeof(SchedByElem)
         )

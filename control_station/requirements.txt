@@ -14,5 +14,6 @@ lxml
 picamera
 picamera2
 uWSGI
+jsonpickle
 
 

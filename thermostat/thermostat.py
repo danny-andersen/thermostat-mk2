@@ -116,18 +116,16 @@ def deleteAllSchedulesMsg(ctx: StationContext):
 def readSchedules(ctx: StationContext):
     # Read file containing locally saved schedules
     if path.exists(LOCAL_SCHEDULE_FILE):
-        with open(LOCAL_SCHEDULE_FILE, "rb") as fp:
-            ctx.schedules = pickle.load(fp)
+        ctx.schedules = ScheduleElement.loadSchedulesFromFile(LOCAL_SCHEDULE_FILE)
+        ctx.schedules.remove(None)  # This is a dummy entry used by the control station
+        for sched in ctx.schedules:
+            sched.temp = sched.temp / 10.0
     else:
         print(f"Locally saved schedule file {LOCAL_SCHEDULE_FILE} not found ")
 
 
 def saveSchedules(ctx: StationContext):
-    # try:
-    with open(LOCAL_SCHEDULE_FILE, "wb") as fp:
-        pickle.dump(ctx.schedules, fp)
-    # except:
-    #     print(f"Failed to save schedules to {LOCAL_SCHEDULE_FILE}: {sys.exc_info()[0]}")
+    ScheduleElement.saveSchedulesToFile(ctx.schedules, LOCAL_SCHEDULE_FILE)
 
 
 def setHolidayMsg(ctx: StationContext, msgBytes: bytes):

@@ -5,6 +5,7 @@ from struct import unpack
 from enum import Enum
 import configparser
 from datetime import datetime
+import jsonpickle
 
 
 MAX_MESSAGE_SIZE = 128
@@ -66,7 +67,7 @@ class LedColour(Enum):
     OFF = 4
 
 
-LOCAL_SCHEDULE_FILE = "./schedules.pickle"
+LOCAL_SCHEDULE_FILE = "./schedules.txt"
 LOCAL_HOLIDAY_FILE = "./holiday.txt"
 
 
@@ -246,6 +247,7 @@ class Holiday:
 
 
 # Struct is long word padded...
+# Used to pass a bytes message between control and outstations
 class SchedByElem(LittleEndianStructure):
     _fields_ = [
         ("day", c_ushort),  # = "0" for every day, "0x0100" for Weekday (Mon - Fri),
@@ -260,7 +262,21 @@ class SchedByElem(LittleEndianStructure):
         (d, s, e, t) = unpack("<HHHh", msgBytes)
         return SchedByElem(d, s, e, t)
 
+    def __init__(self, *args):
+        if len(args) == 4:
+            self.day = args[0]
+            self.start = args[1]
+            self.end = args[2]
+            self.temp = args[3]
+        elif len(args) == 1:
+            sched: ScheduleElement = args[0]
+            self.day = sched.day
+            self.start = sched.start
+            self.end = sched.end
+            self.temp = sched.temp
 
+
+# Used as the internal representation of a schedule
 class ScheduleElement:
     day: int = 0  # = "0" for every day, "0x0100" for Weekday (Mon - Fri),
     # "0x0200" for Weekend (Sat, Sun), 1 - Sunday, 2 - Monday, 3 - Tuesday,....7 - Saturday
@@ -274,9 +290,93 @@ class ScheduleElement:
             self.start = args[1]
             self.end = args[2]
             self.temp = args[3]
-        # elif len(args) == 1:
-        #     load = json.loads(args[0])
-        #     self.__dict__.update(**load)
+        elif len(args) == 1:
+            # Construct from a text file line
+            sched = args[0].split(",")
+            self.day = 0xFF
+            if "Mon-Sun" in sched[0]:
+                self.day = 0x0000
+            elif "Mon-Fri" in sched[0]:
+                self.day = 0x0100
+            elif "Sat-Sun" in sched[0]:
+                self.day = 0x0200
+            elif "Sun" in sched[0]:
+                self.day = 0x0007
+            elif "Mon" in sched[0]:
+                self.day = 0x0001
+            elif "Tue" in sched[0]:
+                self.day = 0x0002
+            elif "Wed" in sched[0]:
+                self.day = 0x0003
+            elif "Thu" in sched[0]:
+                self.day = 0x0004
+            elif "Fri" in sched[0]:
+                self.day = 0x0005
+            elif "Sat" in sched[0]:
+                self.day = 0x0006
+            else:
+                print(f"Unidentified Day specified in schedule: {str}")
+            if self.day != 0xFF:
+                shours = int(sched[1][0:2])
+                smins = int(sched[1][2:4])
+                self.start = shours * 60 + smins
+                ehours = int(sched[2][0:2])
+                emins = int(sched[2][2:4])
+                self.end = ehours * 60 + emins
+                temp = float(sched[3]) * 10
+                self.temp = int(temp)
+
+    def to_string(self):
+        retStr = None
+        dayStr = None
+        if self.day == 0x0000:
+            dayStr = "Mon-Sun"
+        elif self.day == 0x0100:
+            dayStr = "Mon-Fri"
+        elif self.day == 0x0200:
+            dayStr = "Sat-Sun"
+        elif self.day == 0x0007:
+            dayStr = "Sun"
+        elif self.day == 0x0001:
+            dayStr = "Mon"
+        elif self.day == 0x0002:
+            dayStr = "Tue"
+        elif self.day == 0x0003:
+            dayStr = "Wed"
+        elif self.day == 0x0004:
+            dayStr = "Thu"
+        elif self.day == 0x0005:
+            dayStr = "Fri"
+        elif self.day == 0x0006:
+            dayStr = "Sat"
+        else:
+            print(f"Unidentified Day specified in schedule: {str}")
+        if dayStr:
+            retStr = f"{dayStr},{int(self.start/60):02d}{self.start %60:02d},{int(self.end/60):02d}{self.end %60:02d},{self.temp}\n"
+        return retStr
+
+    @staticmethod
+    def loadSchedulesFromFile(filename: str):
+        messages: list[ScheduleElement] = []
+        with open(filename, "r", encoding="utf-8") as f:
+            messages.append(None)
+            try:
+                for linestr in f:
+                    # Read line, split by "," then process + create one message per line (schedule)
+                    element: ScheduleElement = ScheduleElement(linestr)
+                    messages.append(element)
+                    # print(f"Schedule: Day: {schedMsg.day} Start: {schedMsg.start}, End: {schedMsg.end}, Temp: {schedMsg.temp}\n")
+            except:
+                print(f"Processing schedule file failed")
+                messages = []
+                pass
+        return messages
+
+    @staticmethod
+    def saveSchedulesToFile(schedules: set, filename: str):
+        with open(filename, "w", encoding="utf-8") as f:
+            for sched in list(schedules):
+                f.write(sched.to_string())
 
     # def getJson(self):
     #     return json.dumps(self.__dict__)
@@ -391,10 +491,6 @@ class StationContext:
             self.PIR_TRIGGER_PERIOD = int(timings_cfg["PIR_TRIGGER_PERIOD"])
             # print(f"TEMP PERIOD: {self.TEMP_PERIOD}, MSG_PERIOD: {self.GET_MSG_PERIOD}")
 
-        else:
-            # load saved context
-            self.getSavedContext()
-
     # def __init__(self, stn) -> None:
     #     self.stationNo = stn
     #     self.__init__()
@@ -402,20 +498,23 @@ class StationContext:
     # Gets the current global variables from a file
     # This allows multiple app threads to use the same values
     # Each station is single threaded and so there is no need for locks - the station number is sufficient
-    def getSavedContext(self) -> dict:
-        stationFile = f"{self.stationNo}{STATION_FILE}"
-        loadStatus = {}
+    @staticmethod
+    def getSavedContext(stationNo):
+        sc = StationContext(stationNo)
+        stationFile = f"{stationNo}{STATION_FILE}"
         if path.exists(stationFile):
             try:
                 with open(stationFile, "r", encoding="utf-8") as f:
-                    jsonStr = f.readline()
-                    loadStatus = json.loads(jsonStr)
-                    self.__dict__.update(**loadStatus)
+                    jsonStr = f.read()
+                    sc = jsonpickle.decode(jsonStr)
+
+                    # loadStatus = json.loads(jsonStr)
+                    # self.__dict__.update(**loadStatus)
             except:
                 print(
                     f"Failed to load json data from station context file {stationFile}"
                 )
-        return loadStatus
+        return sc
 
     def saveStationContext(self, oldContext: object = None):
         # First determine if anything has changed - only update context file if it has
@@ -423,7 +522,7 @@ class StationContext:
         if self.stationNo != -1 and self != oldContext:
             changed = True
             # save context
-            jsonStr = json.dumps(self.__dict__)
+            jsonStr = jsonpickle.encode(self)
             # Write json to station file
             with open(f"{self.stationNo}{STATION_FILE}", "w", encoding="utf-8") as f:
                 try:

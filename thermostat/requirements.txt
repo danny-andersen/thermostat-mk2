@@ -5,3 +5,5 @@ adafruit-dht
 adafruit-circuitpython-dht
 requests
 crcmod
+jsonpickle
+
