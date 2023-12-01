@@ -1,10 +1,8 @@
-import sys
 from os import path, remove
 
 from datetime import datetime
 from time import sleep
 import requests
-import pickle
 
 # import RPi.GPIO as GPIO
 # import board
@@ -13,6 +11,7 @@ from gpiozero import LED, MotionSensor, OutputDevice
 import crcmod
 import crcmod.predefined
 
+# import sys
 # sys.path.insert(0, "../common")
 from common.humidity_sensor import readTemp
 from common.messages import *
@@ -75,6 +74,32 @@ def extTempMsg(ctx: StationContext, msgBytes: bytes):
     ctx.windStr = str(extMsg.windStr)
     if ctx.DEBUG:
         print(f"Received Ext temp {ctx.currentExtTemp}C , wind {ctx.windStr}")
+    # Write to local file for local UI to pick up
+    with open(EXTTEMP_FILE, "w", encoding="UTF-8") as fp:
+        fp.write(f"{ctx.currentExtTemp}\n")
+        fp.write(f"{ctx.windStr}\n")
+    return True
+
+
+def setMotd(ctx: StationContext, msgBytes: bytes):
+    mlen = len(msgBytes)
+    # Create pascal byte array to unpack string
+    pascal = bytearray(mlen + 1)
+    i = 0
+    for b in msgBytes:
+        if i == 4:
+            # Set pascal string length
+            pascal[i] = mlen - 4
+            i += 1
+        pascal[i] = b
+        i += 1
+    (ctx.motdExpiry, motdBytes) = unpack(f"<I{mlen-3}p", pascal)
+    ctx.currentMotd = motdBytes.decode("UTF-8")
+    if ctx.DEBUG:
+        print(f"Received motd expiry {ctx.motdExpiry}: {ctx.currentMotd}")
+    # Write to local file
+    with open(MOTD_FILE, "w", encoding="UTF-8") as fp:
+        fp.write(f"{ctx.currentMotd}\n")
     return True
 
 
@@ -194,7 +219,8 @@ def processResponseMsg(ctx: StationContext, resp: requests.Response):
         elif msgId == SET_THERM_TEMP_MSG:
             chgState = setCurrentTempMsg(ctx, msgBytes)
         elif msgId == MOTD_MSG:
-            print(f"Need to implement Motd {msgBytes}")
+            # print(f"Motd: {respContent}")
+            chgState = setMotd(ctx, msgBytes)
         else:
             print(f"Ignoring un-implemented msg {msgId}")
         return chgState
@@ -258,9 +284,9 @@ def retrieveScheduledSetTemp(
     return retSched.temp / 10.0
 
 
-def checkOnHoliday(ctx: StationContext, nowSecs: float):
+def checkOnHoliday(ctx: StationContext, secs: float):
     retTemp = -100.0
-    if nowSecs > ctx.currentHoliday.startDate and nowSecs < ctx.currentHoliday.endDate:
+    if secs > ctx.currentHoliday.startDate and secs < ctx.currentHoliday.endDate:
         # On holiday
         retTemp = ctx.currentHoliday.temp
     return retTemp
@@ -310,7 +336,7 @@ def relay_on(ctx: StationContext):
     setLED(ctx, LedColour.GREEN)
 
 
-def checkPIR(ctx: StationContext, nowSecs: float):
+def checkPIR(ctx: StationContext, secs: float):
     # High = off, Low = on (triggered)
     # GPIO.setmode(GPIO.BCM)
     # status = not GPIO.input(ctx.PIR_IN)
@@ -318,9 +344,9 @@ def checkPIR(ctx: StationContext, nowSecs: float):
     # if ctx.DEBUG:
     #     print(f"PIR: {'ON' if status else 'OFF'}")
     if status:
-        ctx.lastPirTime = nowSecs
+        ctx.lastPirTime = secs
         ctx.pir_stat = 1
-    elif nowSecs - ctx.lastPirTime > ctx.PIR_TRIGGER_PERIOD:
+    elif secs - ctx.lastPirTime > ctx.PIR_TRIGGER_PERIOD:
         ctx.pir_stat = 0
 
 
@@ -345,6 +371,16 @@ def runLoop(ctx: StationContext):
         nowTime = datetime.now()
         nowSecs = nowTime.timestamp()
         chgState = False
+        # Check for a local setTemp file - this is set by the GUI
+        if path.exists(SET_TEMP_FILE):
+            with open(SET_TEMP_FILE, "r", encoding="utf-8") as f:
+                try:
+                    tempStr = f.readline()
+                    # print(f"Set temp str {str[:strLen-1]}")
+                    ctx.currentManSetTemp = float(tempStr)
+                except:
+                    print("Set Temp: Failed")
+                    ctx.currentManSetTemp = -100
         if (nowSecs - ctx.lastTempTime) > ctx.TEMP_PERIOD:
             # Not received a temp update from control for more than a set period - read local
             ctx.lastTempTime = nowSecs
@@ -421,7 +457,7 @@ def runLoop(ctx: StationContext):
                 chgState = sendMessage(ctx)
                 ctx.lastMessageTime = nowSecs
 
-        sleep(1)
+        sleep(0.5)
 
 
 if __name__ == "__main__":
@@ -430,7 +466,6 @@ if __name__ == "__main__":
 
     # # Read temp from DHT22
     # (currentTemp, humidity) = readTemp(False)
-    nowSecs = datetime.now().timestamp()
     context.lastTempTime = 0
     context.lastMessageTime = 0
 

@@ -427,6 +427,7 @@ class StationContext:
     noOfSchedules = 0
 
     # Non-persisted fields:
+    currentMotd = ""
     lastMonitorTime = 0
     lastMessageTime = 0
     lastTempTime = 0
