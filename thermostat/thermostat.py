@@ -378,6 +378,7 @@ def runLoop(ctx: StationContext):
                     tempStr = f.readline()
                     # print(f"Set temp str {str[:strLen-1]}")
                     ctx.currentManSetTemp = float(tempStr)
+                    remove(SET_TEMP_FILE)
                 except:
                     print("Set Temp: Failed")
                     ctx.currentManSetTemp = -100
