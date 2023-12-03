@@ -69,6 +69,16 @@ class LedColour(Enum):
 
 LOCAL_SCHEDULE_FILE = "./schedules.txt"
 LOCAL_HOLIDAY_FILE = "./holiday.txt"
+UI_PROCESS_ARGS = [
+    "flutter-pi",
+    "--videomode",
+    "1024x600",
+    "-r",
+    "270",
+    "--release",
+    "/home/danny/thermostat-flutter/",
+]
+BACKLIGHT_CMD = "/home/danny/Backlight/Raspi_USB_Backlight_nogui"
 
 
 class Status(Structure):
@@ -442,6 +452,7 @@ class StationContext:
     windStr = ""
     reset = 0
     controlStationUrl = ""
+    ui_process = None
 
     # Constants overriden by .ini file
     RELAY_OUT = 27

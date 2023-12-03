@@ -25,6 +25,7 @@ def getTemp(history: tuple[dict[int, float], dict[int, float]]):
     # and so allows the web server to read the file quickly and respond quickly
     (temp, humid) = readTemp()
     # Write out temps to be used by controlstation
+    print(f"Latest temp: {temp}, humid {humid}")
     with open(TEMPERATURE_FILE_NEW, mode="w", encoding="utf-8") as f:
         f.write(f"{temp:.1f}\n")
     with open(HUMIDITY_FILE_NEW, mode="w", encoding="utf-8") as f:
@@ -100,8 +101,14 @@ def runMonitorScript():
     print(f"******Starting monitor script thread loop {MONITOR_SCRIPT}")
     lastTempTime = 0
     lastMonitorTime = 0
-    remove(TEMPERATURE_FILE_NEW)
-    remove(HUMIDITY_FILE_NEW)
+    if path.exists(TEMPERATURE_FILE_NEW):
+        remove(TEMPERATURE_FILE_NEW)
+    if path.exists(HUMIDITY_FILE_NEW):
+        remove(HUMIDITY_FILE_NEW)
+    if path.exists(TEMP_AVG_FILE):
+        remove(TEMP_AVG_FILE)
+    if path.exists(HUMID_AVG_FILE):
+        remove(HUMID_AVG_FILE)
     sleep(15)
     history: tuple[dict[int, float], dict[int, float]] = (dict(), dict())
     # Wait until server up and running

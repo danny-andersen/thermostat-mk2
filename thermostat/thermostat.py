@@ -1,4 +1,5 @@
 from os import path, remove
+from subprocess import run, Popen
 
 from datetime import datetime
 from time import sleep
@@ -351,8 +352,33 @@ def checkPIR(ctx: StationContext, secs: float):
 
 
 def displayOn(ctx: StationContext):
-    # TODO: Drive display backlight on
-    pass
+    # Check if UI still active
+    if not ctx.ui_process:
+        # If no process or child has died - restart
+        if ctx.DEBUG:
+            print("Turning UI on")
+        run([BACKLIGHT_CMD, "-b", "8"], check=False)
+        ctx.ui_process = Popen(UI_PROCESS_ARGS, start_new_session=True)
+        if ctx.DEBUG:
+            print(f"UI status: {ctx.ui_process.poll()}")
+
+
+def displayOff(ctx: StationContext):
+    # Drive display off by killing UI process
+    if ctx.ui_process:
+        if ctx.DEBUG:
+            print(f"UI status: {ctx.ui_process.poll()}")
+            print("Turning UI off")
+        # if ctx.ui_process.poll():
+        ctx.ui_process.terminate()
+        run([BACKLIGHT_CMD, "-b", "0"], check=False)
+        ctx.ui_process = None
+
+    # run(
+    #     "kill $(ps -af | grep flutter| grep -v grep | awk '{print $2}')",
+    #     shell=True,
+    #     check=False,
+    # )
 
 
 def runLoop(ctx: StationContext):
@@ -446,7 +472,7 @@ def runLoop(ctx: StationContext):
                 print(f"{nowTime}: PIR ON")
         elif ctx.currentPirStatus and not ctx.pir_stat:
             # Signal for display to be turned off
-            # displayOff(ctx)
+            displayOff(ctx)
             ctx.currentPirStatus = False
             chgState = True
             if ctx.DEBUG:
