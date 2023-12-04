@@ -566,3 +566,42 @@ class StationContext:
             and self.tempMotdTime == other.tempMotdTime
             and self.stationNo == other.stationNo
         )
+
+    def generateStatusFile(self):
+        # print("Generate status file")
+        now: datetime = datetime.now()
+        setExtTemp = False
+        try:
+            if self.stationNo == 1:
+                statusFile = STATUS_FILE
+            else:
+                statusFile = f"{self.stationNo}_{STATUS_FILE}"
+                setExtTemp = True  # External thermometer
+
+            with open(statusFile, "w", encoding="utf-8") as statusf:
+                if self.currentTemp < 1000:
+                    statusf.write(f"Current temp: {self.currentTemp/10:0.1f}\n")
+                    # if setExtTemp:
+                    #     with open(EXTTEMP_FILE, "r", encoding="utf-8") as extf:
+                    #         windStr = extf.readlines()[1]
+                    #     # Write temp to ext temp file for downloading to thermostat
+                    #     with open(EXTTEMP_FILE, "w", encoding="utf-8") as extf:
+                    #         extf.write(f"{sc.currentTemp/10:0.1f}\n")
+                    #         extf.write(windStr)
+                else:
+                    statusf.write("Current temp: Not Set\n")
+                statusf.write(f"Current humidity: {self.currentHumidity/10:0.1f}\n")
+                statusf.write(f"Current set temp: {self.currentSetTemp/10:0.1f}\n")
+                heatOn = "No" if self.currentBoilerStatus == 0 else "Yes"
+                statusf.write(f"Heat on? {heatOn}\n")
+                statusf.write(f"Mins to set temp: {self.currentBoilerStatus}\n")
+                if self.currentExtTemp < 1000:
+                    statusf.write(f"External temp: {self.currentExtTemp/10:0.2f}\n")
+                else:
+                    statusf.write("External temp: Not Set\n")
+                statusf.write(f"No of Schedules: {self.noOfSchedules}\n")
+                statusf.write(f"Last heard time: {now.strftime('%Y%m%d %H:%M:%S')}\n")
+                statusf.write(f"PIR:{self.currentPirStatus}\n")
+
+        except:
+            print("Failed to write status file")

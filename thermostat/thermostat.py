@@ -483,6 +483,7 @@ def runLoop(ctx: StationContext):
             while chgState:
                 chgState = sendMessage(ctx)
                 ctx.lastMessageTime = nowSecs
+            ctx.generateStatusFile()
 
         sleep(0.5)
 

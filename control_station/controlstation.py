@@ -205,46 +205,6 @@ def createThermMsg(temp: float, humidity: float):
     return response
 
 
-def generateStatusFile(sc: StationContext):
-    # print("Generate status file")
-    now: datetime = datetime.now()
-    setExtTemp = False
-    try:
-        if sc.stationNo == 1:
-            statusFile = STATUS_FILE
-        else:
-            statusFile = f"{sc.stationNo}_{STATUS_FILE}"
-            setExtTemp = True  # External thermometer
-
-        with open(statusFile, "w", encoding="utf-8") as statusf:
-            if sc.currentTemp < 1000:
-                statusf.write(f"Current temp: {sc.currentTemp/10:0.1f}\n")
-                # if setExtTemp:
-                #     with open(EXTTEMP_FILE, "r", encoding="utf-8") as extf:
-                #         windStr = extf.readlines()[1]
-                #     # Write temp to ext temp file for downloading to thermostat
-                #     with open(EXTTEMP_FILE, "w", encoding="utf-8") as extf:
-                #         extf.write(f"{sc.currentTemp/10:0.1f}\n")
-                #         extf.write(windStr)
-            else:
-                statusf.write("External temp: Not Set\n")
-            statusf.write(f"Current humidity: {sc.currentHumidity/10:0.1f}\n")
-            statusf.write(f"Current set temp: {sc.currentSetTemp/10:0.1f}\n")
-            heatOn = "No" if sc.currentBoilerStatus == 0 else "Yes"
-            statusf.write(f"Heat on? {heatOn}\n")
-            statusf.write(f"Mins to set temp: {sc.currentBoilerStatus}\n")
-            if sc.currentExtTemp < 1000:
-                statusf.write(f"External temp: {sc.currentExtTemp/10:0.2f}\n")
-            else:
-                statusf.write("External temp: Not Set\n")
-            statusf.write(f"No of Schedules: {sc.noOfSchedules}\n")
-            statusf.write(f"Last heard time: {now.strftime('%Y%m%d %H:%M:%S')}\n")
-            statusf.write(f"PIR:{sc.currentPirStatus}\n")
-
-    except:
-        print("Failed to write status file")
-
-
 # Format = /message?s=<station number>&rs=<1=rebooted>,&u=<1=update only, no resp msg needed>&t=<thermostat temp>&h=<humidity>&st=<set temp>&r=< mins to set temp, 0 off>&p=<1 sensor triggered, 0 sensor off>
 @app.route("/message", methods=["GET"])
 def getMessage():
@@ -354,7 +314,7 @@ def getMessage():
 
     sc.saveStationContext(startContext)
     # Always generate status file to update last heard time
-    generateStatusFile(sc)
+    sc.generateStatusFile()
 
     return response
 
@@ -494,7 +454,7 @@ def getSetTemp(sc: StationContext = None):
         response = getNoMessage()
     if changed:
         sc.saveStationContext()
-    generateStatusFile(sc)
+        sc.generateStatusFile()
 
     return response
 
@@ -549,7 +509,7 @@ def getExtTemp(sc: StationContext = None):
         response = getNoMessage()
     if changed:
         sc.saveStationContext()
-    generateStatusFile(sc)
+        sc.generateStatusFile()
 
     return response
 
@@ -600,7 +560,7 @@ def getHoliday(sc: StationContext = None):
         response = getNoMessage()
     if changed:
         sc.saveStationContext()
-    generateStatusFile(sc)
+        sc.generateStatusFile()
 
     return response
 
