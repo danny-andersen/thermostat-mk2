@@ -119,14 +119,24 @@ def getTemp(conf, hist: tuple[dict[int, float], dict[int, float]]):
 #     )
 
 
-def checkForMotionEvents(conf):
+def checkForMotionEvents(currentPir, conf):
     # If there is a file in the motion directory, it signifies that a motion event is underway
     video_dir = conf["video_dir"]
     # Check for any mpg files
     mpgs = fnmatch.filter(listdir(video_dir), "*.mp4")
     if len(mpgs):
-        # Tell masterstation an event is happening
-        sendMessage(conf, {"pir": "1"})
+        if not currentPir:
+            # Tell masterstation an event is happening
+            # print(f"New Event {currentPir}")
+            sendMessage(conf, {"pir": "1"})
+            currentPir = 1
+    elif currentPir:
+        # Tell masterstation event is over
+        # print(f"Event over {currentPir}")
+        sendMessage(conf, {"pir": "0"})
+        currentPir = 0
+
+    return currentPir
 
 
 def runScript(conf):
@@ -142,11 +152,12 @@ def sendMessage(conf, args: dict[str, str]):
     camera_num = conf["camera_num"]
     masterstation_url = conf["masterstation_url"]
     url_parts = [f"{masterstation_url}/message?s={camera_num}&u=1"]
-    if conf["reset"] == "True":
-        url_parts.append("&rs=1")
-        conf["reset"] = "False"
+    reset = False
     for arg, value in args.items():
-        if "pir" in arg:
+        if "reset" in arg:
+            url_parts.append("&rs=1")
+            reset = True
+        elif "pir" in arg:
             url_parts.append(f"&p={value}")
         elif "temp" in arg:
             url_parts.append(f"&t={value}")
@@ -160,6 +171,8 @@ def sendMessage(conf, args: dict[str, str]):
         #         params.append(f"&t={value}")
         #     case "humid":
         #         params.append(f"&h={value}")
+    if not reset:
+        url_parts.append("&rs=0")
     url = "".join(url_parts)
     # Send HTTP request with a 5 sec timeout
     # print("Sending status update")
@@ -175,20 +188,22 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read("./camera_station.ini")
     cfg = config["setup"]
+    READ_TEMP = bool(cfg["READ_TEMP"])
     lastTempTime = 0
     lastMonitorTime = 0
+    currentPirState = 0
 
     sleep(15)
     history: tuple[dict[int, float], dict[int, float]] = (dict(), dict())
-    cfg["reset"] = "True"
+    sendMessage(cfg, {"reset": True})
     while True:
         nowTime = datetime.now().timestamp()
-        if (nowTime - lastTempTime) > TEMP_PERIOD:
+        if READ_TEMP and (nowTime - lastTempTime) > TEMP_PERIOD:
             # Read temp and humidity and update latest files
             lastTempTime = nowTime
             getTemp(cfg, history)
         # Check if any motion file is present - if so flag to masterstation that a motion event is occurring
-        checkForMotionEvents(cfg)
+        currentPirState = checkForMotionEvents(currentPirState, cfg)
         if (nowTime - lastMonitorTime) > MONITOR_PERIOD:
             # Run the monitor script to upload new files, historic temp changes and check wifi still up
             lastMonitorTime = nowTime
