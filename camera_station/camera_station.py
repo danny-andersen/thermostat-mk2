@@ -37,7 +37,10 @@ TEMP_ONLY = False  # Whether to only read the temperature (DS18B20 device) or bo
 
 def getTemp(conf, hist: tuple[dict[int, float], dict[int, float]]):
     # Read temp and humidity from sensor and then send them to the masterstation
+    DEBUG = (conf["DEBUG"].lower() == "true") or (conf["DEBUG"].lower() == "yes")
     (temp, humid) = readTemp(TEMP_ONLY)
+    if DEBUG:
+        print(f"Read Temperature: {temp, humid}\n")
     # Send to Masterstation
     if temp != -100:
         sendMessage(conf, {"temp": int(temp * 10), "humidity": int(humid * 10)})
@@ -142,8 +145,10 @@ def checkForMotionEvents(currentPir, conf):
 def runScript(conf):
     camera_num = conf["camera_num"]
     video_dir = conf["video_dir"]
+    DEBUG = (conf["DEBUG"].lower() == "true") or (conf["DEBUG"].lower() == "yes")
     cmd = f"{CHECK_WIFI_SCRIPT} {camera_num} {video_dir}"
-    # print(f"Calling check script {cmd}")
+    if DEBUG:
+        print(f"Calling check script {cmd}\n")
     subprocess.run(args=cmd, shell=True, check=False)
 
 
@@ -151,6 +156,8 @@ def sendMessage(conf, args: dict[str, str]):
     # Format = /message?s=<station number>&rs=<1=rebooted>,&u=<1=update only, no resp msg needed>&t=<thermostat temp>&h=<humidity>&st=<set temp>&r=< mins to set temp, 0 off>&p=<1 sensor triggered, 0 sensor off>
     camera_num = conf["camera_num"]
     masterstation_url = conf["masterstation_url"]
+    DEBUG = (conf["DEBUG"].lower() == "true") or (conf["DEBUG"].lower() == "yes")
+
     url_parts = [f"{masterstation_url}/message?s={camera_num}&u=1"]
     reset = False
     for arg, value in args.items():
@@ -175,20 +182,24 @@ def sendMessage(conf, args: dict[str, str]):
         url_parts.append("&rs=0")
     url = "".join(url_parts)
     # Send HTTP request with a 5 sec timeout
-    # print("Sending status update")
+    if DEBUG:
+        print(f"Sending status update: {url}\n")
     try:
         resp = requests.get(url, timeout=5)
         # print(f"Received response code {resp.status_code}")
     except requests.exceptions.RequestException as re:
-        print(f"Failed to send message to masterstation {re}")
+        print(f"Failed to send message to masterstation {re}\n")
 
 
 if __name__ == "__main__":
-    print("Starting camera monitoring service")
+    print("Starting camera monitoring service\n")
     config = configparser.ConfigParser()
     config.read("./camera_station.ini")
     cfg = config["setup"]
-    READ_TEMP = bool(cfg["READ_TEMP"])
+    READ_TEMP = (cfg["READ_TEMP"].lower() == "true") or (
+        cfg["READ_TEMP"].lower() == "yes"
+    )
+    DEBUG = (cfg["DEBUG"].lower() == "true") or (cfg["DEBUG"].lower() == "yes")
     lastTempTime = 0
     lastMonitorTime = 0
     currentPirState = 0
@@ -196,6 +207,8 @@ if __name__ == "__main__":
     sleep(15)
     history: tuple[dict[int, float], dict[int, float]] = (dict(), dict())
     sendMessage(cfg, {"reset": True})
+    if DEBUG:
+        print(f"Entering loop reading Temp? {READ_TEMP}\n")
     while True:
         nowTime = datetime.now().timestamp()
         if READ_TEMP and (nowTime - lastTempTime) > TEMP_PERIOD:
@@ -205,6 +218,8 @@ if __name__ == "__main__":
         # Check if any motion file is present - if so flag to masterstation that a motion event is occurring
         currentPirState = checkForMotionEvents(currentPirState, cfg)
         if (nowTime - lastMonitorTime) > MONITOR_PERIOD:
+            # Tell masterstation still up and running
+            sendMessage(cfg, {"pir": currentPirState})
             # Run the monitor script to upload new files, historic temp changes and check wifi still up
             lastMonitorTime = nowTime
             runScript(cfg)
