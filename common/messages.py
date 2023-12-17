@@ -601,6 +601,9 @@ class StationContext:
                     statusf.write("External temp: Not Set\n")
                 statusf.write(f"No of Schedules: {self.noOfSchedules}\n")
                 statusf.write(f"Last heard time: {now.strftime('%Y%m%d %H:%M:%S')}\n")
+                statusf.write(
+                    f"Last PIR Event time: {datetime.fromtimestamp(self.lastPirTime).strftime('%Y%m%d %H:%M:%S') if self.lastPirTime != 0 else 'Never'}\n"
+                )
                 statusf.write(f"PIR:{self.currentPirStatus}\n")
 
         except:

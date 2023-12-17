@@ -229,6 +229,7 @@ def getMessage():
         sc.setHolidayTime = 0
         sc.extTempTime = 0
         sc.setSchedTime = 0
+        sc.lastPirTime = 0
         sc.currentHumidity = 0
         sc.motdExpiry = MOTD_EXPIRY_SECS
         sc.scheduleMsgs = []
@@ -247,6 +248,8 @@ def getMessage():
     pir = args.get("p", type=int, default=0)
     if (pir and not sc.currentPirStatus) or (not pir and sc.currentPirStatus):
         sc.currentPirStatus = pir
+    if pir:
+        sc.lastPirTime = datetime.now().timestamp()
     response: Response = getNoMessage()
     updateOnly = args.get("u", type=int, default=0)
     if not updateOnly:
