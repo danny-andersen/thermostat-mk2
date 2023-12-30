@@ -28,16 +28,16 @@ from common.messages import *
 # &r=< mins to set temp, 0 off>
 # &p=<1 sensor triggered, 0 sensor off>
 def sendMessage(ctx: StationContext):
-    url_parts = [f"{ctx.controlstation_url}/message?s={ctx.station_num}"]
+    url_parts = [f"{ctx.controlstation_url}/message?s={ctx.stationNo}"]
     if ctx.reset:
         url_parts.append("&rs=1")
         ctx.reset = False
     else:
         url_parts.append("&rs=0")
     url_parts.append(f"&p={ctx.pir_stat}")
-    url_parts.append(f"&t={ctx.currentTemp*10}")
-    url_parts.append(f"&h={ctx.currentHumidity*10}")
-    url_parts.append(f"&st={ctx.currentSetTemp*10}")
+    url_parts.append(f"&t={int(ctx.currentTemp)}")
+    url_parts.append(f"&h={int(ctx.currentHumidity)}")
+    url_parts.append(f"&st={int(ctx.currentSetTemp)}")
     url_parts.append(f"&r={ctx.heat_on}")
     url_parts.append(f"&u={0}")
     url = "".join(url_parts)
@@ -62,7 +62,7 @@ def sendMessage(ctx: StationContext):
 
 def newSetTempMsg(ctx: StationContext, msgBytes: bytes):
     tempMsg = Temp.unpack(msgBytes)
-    ctx.currentSetTemp = tempMsg.temp / 10
+    ctx.currentSetTemp = tempMsg.temp
     ctx.setTempTime = datetime.now().timestamp()
     if ctx.DEBUG:
         print(f"Received Set thermostat temp {ctx.currentSetTemp}C")
@@ -71,7 +71,7 @@ def newSetTempMsg(ctx: StationContext, msgBytes: bytes):
 
 def extTempMsg(ctx: StationContext, msgBytes: bytes):
     extMsg = SetExt.unpack(msgBytes)
-    ctx.currentExtTemp = extMsg.setExt / 10
+    ctx.currentExtTemp = extMsg.setExt
     ctx.windStr = str(extMsg.windStr)
     if ctx.DEBUG:
         print(f"Received Ext temp {ctx.currentExtTemp}C , wind {ctx.windStr}")
@@ -106,8 +106,8 @@ def setMotd(ctx: StationContext, msgBytes: bytes):
 
 def setCurrentTempMsg(ctx: StationContext, msgBytes: bytes):
     tempMsg = Temp.unpack(msgBytes)
-    ctx.currentTemp = tempMsg.temp / 10.0
-    ctx.currentHumidity = tempMsg.humidity / 10.0
+    ctx.currentTemp = tempMsg.temp
+    ctx.currentHumidity = tempMsg.humidity
     ctx.TEMP_PERIOD = int(ctx.config["timings"]["TEMP_PERIOD"])
     ctx.lastTempTime = datetime.now().timestamp()
     if ctx.DEBUG:
@@ -144,6 +144,7 @@ def readSchedules(ctx: StationContext):
     if path.exists(LOCAL_SCHEDULE_FILE):
         ctx.schedules = ScheduleElement.loadSchedulesFromFile(LOCAL_SCHEDULE_FILE)
         ctx.schedules.remove(None)  # This is a dummy entry used by the control station
+        # Need to divide all temps by 10 as they have been multiplied by 10x in ScheduleElement
         for sched in ctx.schedules:
             sched.temp = sched.temp / 10.0
     else:
@@ -282,11 +283,11 @@ def retrieveScheduledSetTemp(
                 priority = 3
                 next_mins = sched.start
                 retSched = sched
-    return retSched.temp / 10.0
+    return retSched.temp
 
 
 def checkOnHoliday(ctx: StationContext, secs: float):
-    retTemp = -100.0
+    retTemp = -1000.0
     if secs > ctx.currentHoliday.startDate and secs < ctx.currentHoliday.endDate:
         # On holiday
         retTemp = ctx.currentHoliday.temp
@@ -407,13 +408,15 @@ def runLoop(ctx: StationContext):
                     remove(SET_TEMP_FILE)
                 except:
                     print("Set Temp: Failed")
-                    ctx.currentManSetTemp = -100
+                    ctx.currentManSetTemp = -1000
         if (nowSecs - ctx.lastTempTime) > ctx.TEMP_PERIOD:
             # Not received a temp update from control for more than a set period - read local
             ctx.lastTempTime = nowSecs
             # While not getting temp from control station, read locally more regularly
             ctx.TEMP_PERIOD = ctx.GET_MSG_PERIOD
             (ctx.currentTemp, ctx.currentHumidity) = readTemp(False)
+            ctx.currentTemp *= 10
+            ctx.currentHumidity *= 10
             if ctx.DEBUG:
                 print(
                     f"Read local temp: {ctx.currentTemp} Humidity: {ctx.currentHumidity}"
@@ -421,7 +424,7 @@ def runLoop(ctx: StationContext):
 
         if (nowSecs - ctx.setTempTime) > ctx.SET_TEMP_PERIOD:
             # Manually set temp has expired
-            ctx.currentManSetTemp = -100
+            ctx.currentManSetTemp = -1000
             ctx.setTempTime = nowSecs
         schedSetTemp = retrieveScheduledSetTemp(ctx, nowTime)
         holidayTemp = checkOnHoliday(ctx, nowSecs)
@@ -430,21 +433,21 @@ def runLoop(ctx: StationContext):
         # schedSetTemp is one from the current schedule
         # holidayTemp is set if we are in a holiday period
         # Precedence: currentSetTemp > holidayTemp > schedSetTemp
-        if ctx.currentManSetTemp != -100:
+        if ctx.currentManSetTemp != -1000:
             ctx.currentSetTemp = ctx.currentManSetTemp
-        elif holidayTemp != -100:
+        elif holidayTemp != -1000:
             ctx.currentSetTemp = holidayTemp
-        elif schedSetTemp != -100:
+        elif schedSetTemp != -1000:
             ctx.currentSetTemp = schedSetTemp
         else:
             ctx.currentSetTemp = ctx.DEFAULT_TEMP
 
-        if ctx.DEBUG:
-            print(
-                f"{nowTime}: Calculated Set temp: {ctx.currentSetTemp} Sched temp: {schedSetTemp} Holiday temp: {holidayTemp} Current Temp: {ctx.currentTemp}\n"
-            )
+        # if ctx.DEBUG:
+        #     print(
+        #         f"{nowTime}: Calculated Set temp: {ctx.currentSetTemp} Sched temp: {schedSetTemp} Holiday temp: {holidayTemp} Current Temp: {ctx.currentTemp}\n"
+        #     )
         if not ctx.heat_on and (
-            ctx.currentTemp < ctx.currentSetTemp and ctx.currentTemp != -100
+            ctx.currentTemp < ctx.currentSetTemp and ctx.currentTemp != -1000
         ):
             # Only turn on heating if have a valid temp reading
             relay_on(ctx)

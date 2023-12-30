@@ -431,9 +431,9 @@ class StationContext:
     )  # current set temp set from control or on thermostat
     currentBoilerStatus = 0.0  # off
     currentPirStatus = 0  # off
-    currentTemp: float = -100.0
-    currentHumidity: float = -100.0
-    currentExtTemp = -100.0
+    currentTemp: float = -1000.0
+    currentHumidity: float = -1000.0
+    currentExtTemp: float = -1000.0
     noOfSchedules = 0
 
     # Non-persisted fields:
@@ -444,9 +444,9 @@ class StationContext:
     lastPirTime = 0
     pir_stat = 0
     heat_on = False
-    currentSentThermTemp = 100.0
-    manHolidayTemp = 100.0
-    lastScheduledTemp = 100.0
+    currentSentThermTemp = 1000.0
+    manHolidayTemp = 1000.0
+    lastScheduledTemp = 1000.0
     isDefaultSchedule = False
     onHoliday = False
     windStr = ""
@@ -486,7 +486,7 @@ class StationContext:
             self.HYSTERISIS = float(setup_cfg["HYSTERISIS"])
             self.DEFAULT_TEMP = float(setup_cfg["DEFAULT_TEMP"])
             self.DEBUG = bool(setup_cfg["DEBUG"])
-            self.station_num = setup_cfg["station_num"]
+            self.stationNo = int(setup_cfg["station_num"])
             self.controlstation_url = setup_cfg["controlstation_url"]
 
             gpio_cfg = self.config["GPIO"]
@@ -570,24 +570,15 @@ class StationContext:
     def generateStatusFile(self):
         # print("Generate status file")
         now: datetime = datetime.now()
-        setExtTemp = False
         try:
             if self.stationNo == 1:
                 statusFile = STATUS_FILE
             else:
                 statusFile = f"{self.stationNo}_{STATUS_FILE}"
-                setExtTemp = True  # External thermometer
 
             with open(statusFile, "w", encoding="utf-8") as statusf:
-                if self.currentTemp < 1000:
+                if self.currentTemp != -1000:
                     statusf.write(f"Current temp: {self.currentTemp/10:0.1f}\n")
-                    # if setExtTemp:
-                    #     with open(EXTTEMP_FILE, "r", encoding="utf-8") as extf:
-                    #         windStr = extf.readlines()[1]
-                    #     # Write temp to ext temp file for downloading to thermostat
-                    #     with open(EXTTEMP_FILE, "w", encoding="utf-8") as extf:
-                    #         extf.write(f"{sc.currentTemp/10:0.1f}\n")
-                    #         extf.write(windStr)
                 else:
                     statusf.write("Current temp: Not Set\n")
                 statusf.write(f"Current humidity: {self.currentHumidity/10:0.1f}\n")

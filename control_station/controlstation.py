@@ -229,8 +229,10 @@ def getMessage():
         sc.setHolidayTime = 0
         sc.extTempTime = 0
         sc.setSchedTime = 0
-        sc.lastPirTime = 0
-        sc.currentHumidity = 0
+        sc.currentTemp = -1000
+        sc.currentExtTemp = -1000
+        sc.currentSetTemp = -1000
+        sc.currentHumidity = -1000
         sc.motdExpiry = MOTD_EXPIRY_SECS
         sc.scheduleMsgs = []
     temp = args.get("t", type=float)
@@ -508,7 +510,7 @@ def getExtTemp(sc: StationContext = None):
                 pass
     if not gotExt:
         print(f"No ext temp file")
-        sc.currentExtTemp = 1000.0
+        sc.currentExtTemp = -1000.0
         response = getNoMessage()
     if changed:
         sc.saveStationContext()

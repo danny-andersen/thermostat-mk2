@@ -171,3 +171,8 @@ suntimes.txt
 #Private flies
 monitor_home/safeDevices.txt
 camera_station/camera_station.ini
+camera_station/*.cfg
+camera_station/motion.pem
+camera_station/motion.key
+camera_station/motion.p12
+camera_station/*.pgm
