@@ -38,7 +38,7 @@ def sendMessage(ctx: StationContext):
     url_parts.append(f"&t={int(ctx.currentTemp)}")
     url_parts.append(f"&h={int(ctx.currentHumidity)}")
     url_parts.append(f"&st={int(ctx.currentSetTemp)}")
-    url_parts.append(f"&r={ctx.heat_on}")
+    url_parts.append(f"&r={int(ctx.currentBoilerStatus)}")
     url_parts.append(f"&u={0}")
     url = "".join(url_parts)
     chgState = False
@@ -446,18 +446,20 @@ def runLoop(ctx: StationContext):
         #     print(
         #         f"{nowTime}: Calculated Set temp: {ctx.currentSetTemp} Sched temp: {schedSetTemp} Holiday temp: {holidayTemp} Current Temp: {ctx.currentTemp}\n"
         #     )
-        if not ctx.heat_on and (
+        if not ctx.currentBoilerStatus and (
             ctx.currentTemp < ctx.currentSetTemp and ctx.currentTemp != -1000
         ):
             # Only turn on heating if have a valid temp reading
             relay_on(ctx)
-            ctx.heat_on = True
+            ctx.currentBoilerStatus = 1
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: HEAT ON")
-        elif ctx.heat_on and ctx.currentTemp > (ctx.currentSetTemp + ctx.HYSTERISIS):
+        elif ctx.currentBoilerStatus and ctx.currentTemp > (
+            ctx.currentSetTemp + ctx.HYSTERISIS
+        ):
             relay_off(ctx)
-            ctx.heat_on = False
+            ctx.currentBoilerStatus = 0
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: HEAT OFF")

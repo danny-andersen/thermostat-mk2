@@ -443,7 +443,6 @@ class StationContext:
     lastTempTime = 0
     lastPirTime = 0
     pir_stat = 0
-    heat_on = False
     currentSentThermTemp = 1000.0
     manHolidayTemp = 1000.0
     lastScheduledTemp = 1000.0
