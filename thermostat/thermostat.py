@@ -49,6 +49,7 @@ def sendMessage(ctx: StationContext):
         # print(f"Received response code {resp.status_code}")
         if resp.status_code == 200:
             chgState = processResponseMsg(ctx, resp)
+            flickerLED(ctx)
         else:
             print(
                 f"Failed to send message to control station: Response: {resp.status_code}"
@@ -302,18 +303,43 @@ def setLED(ctx: StationContext, colour: LedColour):
     if colour == LedColour.GREEN:
         # GPIO.output(ctx.GREEN_LED, GPIO.HIGH)
         # GPIO.output(ctx.RED_LED, GPIO.LOW)
-        ctx.greenLED.on()
         ctx.redLED.off()
+        ctx.greenLED.on()
+        ctx.blueLED.off()
     elif colour == LedColour.RED:
         # GPIO.output(ctx.GREEN_LED, GPIO.LOW)
         # GPIO.output(ctx.RED_LED, GPIO.HIGH)
-        ctx.greenLED.off()
         ctx.redLED.on()
+        ctx.greenLED.off()
+        ctx.blueLED.off()
+    elif colour == LedColour.BLUE:
+        ctx.redLED.off()
+        ctx.greenLED.off()
+        ctx.blueLED.on()
     elif colour == LedColour.AMBER:
         # GPIO.output(ctx.GREEN_LED, GPIO.HIGH)
         # GPIO.output(ctx.RED_LED, GPIO.HIGH)
-        ctx.greenLED.on()
         ctx.redLED.on()
+        ctx.greenLED.on()
+        ctx.blueLED.off()
+    elif colour == LedColour.PURPLE:
+        # GPIO.output(ctx.GREEN_LED, GPIO.HIGH)
+        # GPIO.output(ctx.RED_LED, GPIO.HIGH)
+        ctx.redLED.on()
+        ctx.greenLED.off()
+        ctx.blueLED.on()
+    elif colour == LedColour.CYAN:
+        # GPIO.output(ctx.GREEN_LED, GPIO.HIGH)
+        # GPIO.output(ctx.RED_LED, GPIO.HIGH)
+        ctx.redLED.off()
+        ctx.greenLED.on()
+        ctx.blueLED.on()
+    elif colour == LedColour.WHITE:
+        # GPIO.output(ctx.GREEN_LED, GPIO.HIGH)
+        # GPIO.output(ctx.RED_LED, GPIO.HIGH)
+        ctx.redLED.on()
+        ctx.greenLED.on()
+        ctx.blueLED.on()
     else:
         # GPIO.output(ctx.GREEN_LED, GPIO.LOW)
         # GPIO.output(ctx.RED_LED, GPIO.LOW)
@@ -327,7 +353,17 @@ def relay_off(ctx: StationContext):
     # GPIO.setmode(GPIO.BCM)
     # GPIO.output(ctx.RELAY_OUT, GPIO.LOW)
     ctx.relay.off()
-    setLED(ctx, LedColour.RED)
+    setLED(ctx, LedColour.BLUE)
+
+
+def flickerLED(ctx: StationContext):
+    ctx.greenLED.on()
+    sleep(0.05)
+    ctx.greenLED.off()
+    sleep(0.05)
+    ctx.greenLED.on()
+    sleep(0.05)
+    ctx.greenLED.off()
 
 
 def relay_on(ctx: StationContext):
@@ -335,7 +371,7 @@ def relay_on(ctx: StationContext):
         print("Relay ON")
     # GPIO.output(ctx.RELAY_OUT, GPIO.HIGH)
     ctx.relay.on()
-    setLED(ctx, LedColour.GREEN)
+    setLED(ctx, LedColour.RED)
 
 
 def checkPIR(ctx: StationContext, secs: float):
@@ -514,18 +550,28 @@ if __name__ == "__main__":
     context.relay = OutputDevice(
         context.RELAY_OUT, active_high=True, initial_value=False
     )
-    context.redLED = LED(context.RED_LED)
-    context.greenLED = LED(context.GREEN_LED)
-    context.pir = MotionSensor(context.PIR_IN)
-    setLED(context, LedColour.AMBER)
-    # relay_off(context)
-
     readSchedules(context)
     readHoliday(context)
 
-    sleep(5)
+    context.redLED = LED(context.RED_LED)
+    context.greenLED = LED(context.GREEN_LED)
+    context.blueLED = LED(context.BLUE_LED)
+    context.pir = MotionSensor(context.PIR_IN)
+    setLED(context, LedColour.GREEN)
+    sleep(1)
+    setLED(context, LedColour.AMBER)
+    sleep(1)
+    setLED(context, LedColour.RED)
+    sleep(1)
+    setLED(context, LedColour.WHITE)
+    sleep(1)
+    setLED(context, LedColour.CYAN)
+    sleep(1)
+
+    # relay_off(context)
+
     if context.DEBUG:
         print("Setup complete")
 
-    setLED(context, LedColour.RED)
+    setLED(context, LedColour.BLUE)
     runLoop(context)

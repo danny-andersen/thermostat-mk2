@@ -64,7 +64,11 @@ class LedColour(Enum):
     RED = 1
     GREEN = 2
     AMBER = 3
-    OFF = 4
+    BLUE = 4
+    PURPLE = 5
+    CYAN = 6
+    WHITE = 7
+    OFF = 10
 
 
 LOCAL_SCHEDULE_FILE = "./schedules.txt"
@@ -458,6 +462,7 @@ class StationContext:
     PIR_IN = 17
     GREEN_LED = 23
     RED_LED = 24
+    BLUE_LED = 25
     TEMP_SENSOR: int = 18
     TEMP_PERIOD: int = 60
     PIR_TRIGGER_PERIOD = 30
@@ -474,6 +479,7 @@ class StationContext:
     relay = None
     redLED = None
     greenLED = None
+    blueLED = None
     pir = None
 
     def __init__(self, stn=-1, configFile="") -> None:
@@ -493,6 +499,7 @@ class StationContext:
             self.PIR_IN = int(gpio_cfg["PIR_IN"])
             self.GREEN_LED = int(gpio_cfg["GREEN_LED"])
             self.RED_LED = int(gpio_cfg["RED_LED"])
+            self.BLUE_LED = int(gpio_cfg["BLUE_LED"])
             self.TEMP_SENSOR = int(gpio_cfg["TEMP_SENSOR"])
 
             timings_cfg = self.config["timings"]
@@ -587,6 +594,7 @@ class StationContext:
                 statusf.write(f"Mins to set temp: {self.currentBoilerStatus}\n")
                 if self.currentExtTemp < 1000:
                     statusf.write(f"External temp: {self.currentExtTemp/10:0.2f}\n")
+
                 else:
                     statusf.write("External temp: Not Set\n")
                 statusf.write(f"No of Schedules: {self.noOfSchedules}\n")
