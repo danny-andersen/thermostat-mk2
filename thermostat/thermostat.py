@@ -390,7 +390,7 @@ def checkPIR(ctx: StationContext, secs: float):
 
 def displayOn(ctx: StationContext):
     # Check if UI still active
-    if not ctx.ui_process:
+    if not ctx.ui_process or ctx.ui_process.poll() != None:
         # If no process or child has died - restart
         if ctx.DEBUG:
             print("Turning UI on")
