@@ -66,19 +66,21 @@ def newSetTempMsg(ctx: StationContext, msgBytes: bytes):
     ctx.currentSetTemp = tempMsg.temp
     ctx.setTempTime = datetime.now().timestamp()
     if ctx.DEBUG:
-        print(f"Received Set thermostat temp {ctx.currentSetTemp}C")
+        print(f"Received Set thermostat temp {ctx.currentSetTemp/10}C")
     return True
 
 
 def extTempMsg(ctx: StationContext, msgBytes: bytes):
     extMsg = SetExt.unpack(msgBytes)
-    ctx.currentExtTemp = extMsg.setExt
-    ctx.windStr = str(extMsg.windStr)
+    ctx.currentExtTemp = float(extMsg.setExt)
+    ctx.windStr = "".join([chr(i) for i in extMsg.windStr])
     if ctx.DEBUG:
-        print(f"Received Ext temp {ctx.currentExtTemp}C , wind {ctx.windStr}")
+        print(
+            f"Received Ext temp {ctx.currentExtTemp/10}C , wind {extMsg.windStr} -> {ctx.windStr}"
+        )
     # Write to local file for local UI to pick up
     with open(EXTTEMP_FILE, "w", encoding="UTF-8") as fp:
-        fp.write(f"{ctx.currentExtTemp}\n")
+        fp.write(f"{ctx.currentExtTemp/10}\n")
         fp.write(f"{ctx.windStr}\n")
     return True
 
@@ -96,9 +98,14 @@ def setMotd(ctx: StationContext, msgBytes: bytes):
         pascal[i] = b
         i += 1
     (ctx.motdExpiry, motdBytes) = unpack(f"<I{mlen-3}p", pascal)
-    ctx.currentMotd = motdBytes.decode("UTF-8")
+    checkedBytes = bytearray()
+    for b in motdBytes:
+        checkedBytes.append(32 if b == 0 else b)
+    ctx.currentMotd = checkedBytes.decode("UTF-8")
     if ctx.DEBUG:
-        print(f"Received motd expiry {ctx.motdExpiry}: {ctx.currentMotd}")
+        print(
+            f"Received motd expiry {ctx.motdExpiry}: {motdBytes} -> {ctx.currentMotd}"
+        )
     # Write to local file
     with open(MOTD_FILE, "w", encoding="UTF-8") as fp:
         fp.write(f"{ctx.currentMotd}\n")
@@ -113,7 +120,7 @@ def setCurrentTempMsg(ctx: StationContext, msgBytes: bytes):
     ctx.lastTempTime = datetime.now().timestamp()
     if ctx.DEBUG:
         print(
-            f"Received current temp {ctx.currentTemp}C, humidity {ctx.currentHumidity}"
+            f"Received current temp {ctx.currentTemp/10}C, humidity {ctx.currentHumidity/10}"
         )
     return False
 
@@ -440,7 +447,10 @@ def runLoop(ctx: StationContext):
                 try:
                     tempStr = f.readline()
                     # print(f"Set temp str {str[:strLen-1]}")
-                    ctx.currentManSetTemp = float(tempStr)
+                    ctx.currentManSetTemp = float(tempStr) * 10
+                    chgState = True
+                    if ctx.DEBUG:
+                        print(f"Local Set temp set: {ctx.currentManSetTemp/10} ")
                     remove(SET_TEMP_FILE)
                 except:
                     print("Set Temp: Failed")
@@ -455,13 +465,14 @@ def runLoop(ctx: StationContext):
             ctx.currentHumidity *= 10
             if ctx.DEBUG:
                 print(
-                    f"Read local temp: {ctx.currentTemp} Humidity: {ctx.currentHumidity}"
+                    f"Read local temp: {ctx.currentTemp/10} Humidity: {ctx.currentHumidity/10}"
                 )
 
         if (nowSecs - ctx.setTempTime) > ctx.SET_TEMP_PERIOD:
             # Manually set temp has expired
             ctx.currentManSetTemp = -1000
             ctx.setTempTime = nowSecs
+            chgState = True
         schedSetTemp = retrieveScheduledSetTemp(ctx, nowTime)
         holidayTemp = checkOnHoliday(ctx, nowSecs)
         # We have three set temperatures:
@@ -469,6 +480,7 @@ def runLoop(ctx: StationContext):
         # schedSetTemp is one from the current schedule
         # holidayTemp is set if we are in a holiday period
         # Precedence: currentSetTemp > holidayTemp > schedSetTemp
+        saveTemp = ctx.currentSetTemp
         if ctx.currentManSetTemp != -1000:
             ctx.currentSetTemp = ctx.currentManSetTemp
         elif holidayTemp != -1000:
@@ -477,6 +489,8 @@ def runLoop(ctx: StationContext):
             ctx.currentSetTemp = schedSetTemp
         else:
             ctx.currentSetTemp = ctx.DEFAULT_TEMP
+        if saveTemp != ctx.currentSetTemp:
+            chgState = True
 
         # if ctx.DEBUG:
         #     print(
@@ -521,10 +535,11 @@ def runLoop(ctx: StationContext):
         if chgState or ((nowSecs - ctx.lastMessageTime) > ctx.GET_MSG_PERIOD):
             # Send update in status and get any messages from control station
             chgState = True
+            ctx.generateStatusFile()
             while chgState:
                 chgState = sendMessage(ctx)
                 ctx.lastMessageTime = nowSecs
-            ctx.generateStatusFile()
+                ctx.generateStatusFile()
 
         sleep(0.5)
 
