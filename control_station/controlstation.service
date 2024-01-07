@@ -1,11 +1,11 @@
 [Unit]
-Description=Masterstation to send commands to Digital thermostat
+Description=Control station to send commands to and receive telemetry from Digital thermostat
 
 [Service]
 #Environment= MY_ENVIRONMENT_VAR =/path/to/file.config
-WorkingDirectory=/home/danny/digi-thermostat/controlstation
-#ExecStart=/home/danny/digi-thermostat/controlstation/controlstation.sh
-ExecStart=uwsgi --http 0.0.0.0:5000 --rem-header Content-type --master --uid danny --gid danny --workers 4 -w controlstation:app --plugin python3 --enable-threads --env HOME=/home/danny
+WorkingDirectory=/home/danny/control_station
+#ExecStart=uwsgi --http 0.0.0.0:5000 --rem-header Content-type --master --uid danny --gid danny --workers 4 -w controlstation:app --plugin python3 -H /home/danny/control_station/ --enable-threads --env HOME=/home/danny/control_station
+ExecStart=/home/danny/control_station/controlstation.sh
 Restart=on-failure
 
 [Install]
