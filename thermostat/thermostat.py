@@ -63,10 +63,10 @@ def sendMessage(ctx: StationContext):
 
 def newSetTempMsg(ctx: StationContext, msgBytes: bytes):
     tempMsg = Temp.unpack(msgBytes)
-    ctx.currentSetTemp = tempMsg.temp
+    ctx.currentManSetTemp = tempMsg.temp
     ctx.setTempTime = datetime.now().timestamp()
     if ctx.DEBUG:
-        print(f"Received Set thermostat temp {ctx.currentSetTemp/10}C")
+        print(f"Received Set thermostat temp {ctx.currentManSetTemp/10}C")
     return True
 
 
