@@ -156,6 +156,11 @@ class HolidayDateStr(Structure):
         (minute, h, d, m, y) = unpack("<BBBBB", msgBytes)
         return HolidayDateStr(minute, h, d, m, y)
 
+    @staticmethod
+    def unpackNoMins(msgBytes: bytes):
+        (h, d, m, y) = unpack("<BBBB", msgBytes)
+        return HolidayDateStr(0, h, d, m, y)
+
 
 class HolidayStr(Structure):
     _fields_ = [
@@ -170,6 +175,13 @@ class HolidayStr(Structure):
         sd = HolidayDateStr.unpack(msgBytes[0:5])
         ed = HolidayDateStr.unpack(msgBytes[5:10])
         (t, v) = unpack("<hB", msgBytes[10:13])
+        return HolidayStr(sd, ed, t, v)
+
+    @staticmethod
+    def unpackNoMins(msgBytes: bytes):
+        sd = HolidayDateStr.unpackNoMins(msgBytes[0:4])
+        ed = HolidayDateStr.unpackNoMins(msgBytes[4:8])
+        (t, v) = unpack("<hB", msgBytes[8:11])
         return HolidayStr(sd, ed, t, v)
 
     @staticmethod
@@ -228,7 +240,7 @@ class HolidayStr(Structure):
 class Holiday:
     startDate: float = 0.0
     endDate: float = 0.0
-    temp: float = 10.0
+    temp: float = 100.0
 
     def __init__(self, *args):
         if len(args) == 3:
@@ -252,7 +264,7 @@ class Holiday:
                     hols.endDate.hour,
                     hols.endDate.min,
                 ).timestamp()
-                self.temp = hols.temp / 10.0
+                self.temp = hols.temp
             # load = json.loads(args[0])
             # self.__dict__.update(**load)
 
@@ -434,7 +446,7 @@ class StationContext:
         -1000.0
     )  # current set temp set from control or on thermostat
     currentBoilerStatus = 0.0  # off
-    currentPirStatus = 0  # off
+    displayOn: bool = False  # off
     currentTemp: float = -1000.0
     currentHumidity: float = -1000.0
     currentExtTemp: float = -1000.0
@@ -556,7 +568,7 @@ class StationContext:
         return (
             self.currentBoilerStatus == other.currentBoilerStatus
             and self.currentExtTemp == other.currentExtTemp
-            and self.currentPirStatus == other.currentPirStatus
+            and self.displayOn == other.displayOn
             and self.currentSetTemp == other.currentSetTemp
             and self.currentTemp == other.currentTemp
             and self.currentHumidity == other.currentHumidity
@@ -602,7 +614,7 @@ class StationContext:
                 statusf.write(
                     f"Last PIR Event time: {datetime.fromtimestamp(self.lastPirTime).strftime('%Y%m%d %H:%M:%S') if self.lastPirTime != 0 else 'Never'}\n"
                 )
-                statusf.write(f"PIR:{self.currentPirStatus}\n")
+                statusf.write(f"PIR:{self.displayOn}\n")
 
         except:
             print("Failed to write status file")

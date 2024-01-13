@@ -164,7 +164,11 @@ def saveSchedules(ctx: StationContext):
 
 
 def setHolidayMsg(ctx: StationContext, msgBytes: bytes):
-    hols: HolidayStr = HolidayStr.unpack(msgBytes)
+    if len(msgBytes) == 13:
+        hols: HolidayStr = HolidayStr.unpack(msgBytes)
+    else:
+        # old school message with no mins set
+        hols: HolidayStr = HolidayStr.unpackNoMins(msgBytes)
     holiday: Holiday = Holiday(hols)
     ctx.currentHoliday = holiday
     HolidayStr.saveToFile(LOCAL_HOLIDAY_FILE, hols)
@@ -502,16 +506,16 @@ def runLoop(ctx: StationContext):
         # sleep(1)
         # relay_off(ctx)
         checkPIR(ctx, nowSecs)
-        if not ctx.currentPirStatus and ctx.pir_stat:
+        if not ctx.displayOn and ctx.pir_stat:
             displayOn(ctx)
-            ctx.currentPirStatus = 1
+            ctx.displayOn = True
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: PIR ON")
-        elif ctx.currentPirStatus and not ctx.pir_stat:
+        elif ctx.displayOn and not ctx.pir_stat:
             # Signal for display to be turned off
             displayOff(ctx)
-            ctx.currentPirStatus = False
+            ctx.displayOn = False
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: PIR OFF")
