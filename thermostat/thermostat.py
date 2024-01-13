@@ -396,33 +396,18 @@ def checkPIR(ctx: StationContext, secs: float):
 
 
 def displayOn(ctx: StationContext):
-    # Check if UI still active
-    if not ctx.ui_process or ctx.ui_process.poll() != None:
-        # If no process or child has died - restart
-        if ctx.DEBUG:
-            print("Turning UI on")
-        run([BACKLIGHT_CMD, "-b", "8"], check=False)
-        ctx.ui_process = Popen(UI_PROCESS_ARGS, start_new_session=True)
-        if ctx.DEBUG:
-            print(f"UI status: {ctx.ui_process.poll()}")
+    # Turn backlight on to show display
+    if ctx.DEBUG:
+        print("Turning Backlight on")
+    run([BACKLIGHT_CMD, "-b", "7"], check=False)
 
 
 def displayOff(ctx: StationContext):
-    # Drive display off by killing UI process
-    if ctx.ui_process:
-        if ctx.DEBUG:
-            print(f"UI status: {ctx.ui_process.poll()}")
-            print("Turning UI off")
-        # if ctx.ui_process.poll():
-        ctx.ui_process.terminate()
-        run([BACKLIGHT_CMD, "-b", "0"], check=False)
-        ctx.ui_process = None
-
-    # run(
-    #     "kill $(ps -af | grep flutter| grep -v grep | awk '{print $2}')",
-    #     shell=True,
-    #     check=False,
-    # )
+    # Turn backlight off
+    if ctx.DEBUG:
+        # print(f"UI status: {ctx.ui_process.poll()}")
+        print("Turning Backlight off")
+    run([BACKLIGHT_CMD, "-b", "0"], check=False)
 
 
 def runLoop(ctx: StationContext):
@@ -517,10 +502,8 @@ def runLoop(ctx: StationContext):
         # sleep(1)
         # relay_off(ctx)
         checkPIR(ctx, nowSecs)
-        if ctx.pir_stat:
-            # Signal for display to be turned on
-            displayOn(ctx)
         if not ctx.currentPirStatus and ctx.pir_stat:
+            displayOn(ctx)
             ctx.currentPirStatus = 1
             chgState = True
             if ctx.DEBUG:
@@ -554,32 +537,30 @@ if __name__ == "__main__":
     context.lastMessageTime = 0
 
     context.reset = 1
-
-    # # Use GPIO numbering, not pin numbering
-    # GPIO.setmode(GPIO.BCM)
-    # GPIO.setup(context.RELAY_OUT, GPIO.OUT)  # Relay output
-    # GPIO.setup(context.PIR_IN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # PIR input
-    # # GPIO.setup(context.TEMP_SENSOR, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # DHT22
-    # GPIO.setup(context.GREEN_LED, GPIO.OUT)  # Green LED lit when boiler on
-    # GPIO.setup(context.RED_LED, GPIO.OUT)  # RED LED lit when boiler off
-    context.relay = OutputDevice(
-        context.RELAY_OUT, active_high=True, initial_value=False
-    )
-    readSchedules(context)
-    readHoliday(context)
-
     context.redLED = LED(context.RED_LED)
     context.greenLED = LED(context.GREEN_LED)
     context.blueLED = LED(context.BLUE_LED)
     context.pir = MotionSensor(context.PIR_IN)
+    context.relay = OutputDevice(
+        context.RELAY_OUT, active_high=True, initial_value=False
+    )
     setLED(context, LedColour.GREEN)
     sleep(1)
+
+    context.lastPirTime = datetime.now().timestamp()
+    context.pir_stat = 1
+    displayOn(context)
     setLED(context, LedColour.AMBER)
     sleep(1)
+
+    readSchedules(context)
     setLED(context, LedColour.RED)
     sleep(1)
+
+    readHoliday(context)
     setLED(context, LedColour.WHITE)
     sleep(1)
+
     setLED(context, LedColour.CYAN)
     sleep(1)
 
