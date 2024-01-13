@@ -248,8 +248,8 @@ def getMessage():
     if heat or (heat == 0 and sc.currentBoilerStatus > 0):
         sc.currentBoilerStatus = heat
     pir = args.get("p", type=int, default=0)
-    if (pir and not sc.currentPirStatus) or (not pir and sc.currentPirStatus):
-        sc.currentPirStatus = pir
+    if (pir and not sc.displayOn) or (not pir and sc.displayOn):
+        sc.displayOn = pir
     if pir:
         sc.lastPirTime = datetime.now().timestamp()
     response: Response = getNoMessage()
@@ -357,11 +357,11 @@ def getMotd(sc: StationContext = None):
         else:
             # No station number given - use default context
             sc: StationContext = StationContext()
-    str = ""
+    motdStr = ""
     checkAndDeleteFile(MOTD_FILE, sc.motdExpiry)
     if path.exists(MOTD_FILE):
         with open(MOTD_FILE, "r", encoding="utf-8") as f:
-            str = f.readline()
+            motdStr = f.readline()
             exp = int(f.readline())
             sc.motdExpiry = (
                 MOTD_EXPIRY_SECS if exp == "" else exp - 10000
@@ -372,7 +372,7 @@ def getMotd(sc: StationContext = None):
                 )
             sc.motdTime = stat(MOTD_FILE).st_mtime
             sc.tempMotdTime = 0
-            str = str[: len(str) - 1]
+            motdStr = motdStr[: len(motdStr) - 1]
             resp = createMotd(str, exp)
     else:
         resp = getDefaultMotd()
@@ -384,8 +384,8 @@ def getMotd(sc: StationContext = None):
 
 
 def getDefaultMotd():
-    str = "No weather forecast, please wait....."
-    return createMotd(str, TEMP_MOTD_EXPIRY_SECS * 1000)
+    motdStr = "No weather forecast, please wait....."
+    return createMotd(motdStr, TEMP_MOTD_EXPIRY_SECS * 1000)
 
 
 def createResetMsg():
@@ -484,16 +484,16 @@ def getExtTemp(sc: StationContext = None):
     if path.exists(EXTTEMP_FILE):
         with open(EXTTEMP_FILE, "r", encoding="utf-8") as f:
             try:
-                str = f.readline()
+                tmpStr = f.readline()
                 strLen = len(str)
                 extMsg.setExt = c_int16(int(float(str[: strLen - 1]) * 10))
                 sc.currentExtTemp = extMsg.setExt
                 # print(f"Ext Temp {extMsg.setExt}")
                 str = f.readline()
-                strLen = len(str)
+                strLen = len(tmpStr)
                 if strLen > MAX_WIND_SIZE:
                     strLen = MAX_WIND_SIZE
-                extMsg.windStr = bytes(str[: strLen - 1], encoding="utf-8")
+                extMsg.windStr = bytes(tmpStr[: strLen - 1], encoding="utf-8")
                 # print(f"Wind str {extMsg.windStr}")
                 msgBytes = getMessageEnvelope(
                     SET_EXT_MSG, bytearray(extMsg), sizeof(SetExt)

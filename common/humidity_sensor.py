@@ -16,7 +16,7 @@ def readDHTTemp():
     retryCount = 0
     gotValue = False
     # Try reading the device three times
-    while not gotValue and retryCount < 5:
+    while not gotValue and retryCount < 3:
         retryCount += 1
         try:
             # dht_device.measure()
@@ -30,7 +30,7 @@ def readDHTTemp():
             else:
                 sleep(1)
         except RuntimeError as re:
-            # print(re)
+            print(re)
             sleep(2)
     dht_device.exit()
 
