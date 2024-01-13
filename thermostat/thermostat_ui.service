@@ -5,7 +5,7 @@ Description=Service to provide a GUI for a local thermostat
 #Environment= MY_ENVIRONMENT_VAR =/path/to/file.config
 User=danny
 WorkingDirectory=/home/danny
-ExecStart=flutter-pi --videomode 1024x600 -r 270 --release /home/danny/thermostat-flutter/
+ExecStart=/home/danny/run_thermostat.sh
 Restart=on-failure
 
 [Install]
