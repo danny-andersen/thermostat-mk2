@@ -485,11 +485,11 @@ def getExtTemp(sc: StationContext = None):
         with open(EXTTEMP_FILE, "r", encoding="utf-8") as f:
             try:
                 tmpStr = f.readline()
-                strLen = len(str)
-                extMsg.setExt = c_int16(int(float(str[: strLen - 1]) * 10))
+                strLen = len(tmpStr)
+                extMsg.setExt = c_int16(int(float(tmpStr[: strLen - 1]) * 10))
                 sc.currentExtTemp = extMsg.setExt
                 # print(f"Ext Temp {extMsg.setExt}")
-                str = f.readline()
+                tmpStr = f.readline()
                 strLen = len(tmpStr)
                 if strLen > MAX_WIND_SIZE:
                     strLen = MAX_WIND_SIZE
