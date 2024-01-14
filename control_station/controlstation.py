@@ -33,19 +33,19 @@ def getTemp(history: tuple[dict[int, float], dict[int, float]]):
     # Create a rolling 5 min average for temp and humidity to be used by history
     now = datetime.now()
     (histTempD, histHumidD) = history
-    min = now.minute % TEMP_AVERAGE_MIN
-    histTemp = histTempD.get(min, -100)
+    nowmin = now.minute % TEMP_AVERAGE_MIN
+    histTemp = histTempD.get(nowmin, -100)
     if histTemp == -100:
-        histTempD[min] = temp
+        histTempD[nowmin] = temp
     else:
-        histTempD[min] = (temp + histTemp) / 2
-    min = now.minute % TEMP_AVERAGE_MIN
-    histHumid = histHumidD.get(min, -100)
+        histTempD[nowmin] = (temp + histTemp) / 2
+    nowmin = now.minute % TEMP_AVERAGE_MIN
+    histHumid = histHumidD.get(nowmin, -100)
     if histHumid == -100:
-        histHumidD[min] = humid
+        histHumidD[nowmin] = humid
     else:
-        histHumidD[min] = (humid + histHumid) / 2
-    if min == 0:
+        histHumidD[nowmin] = (humid + histHumid) / 2
+    if nowmin == 0:
         # Calculate temp average
         totalTemp = 0.0
         vals = 0
@@ -65,13 +65,13 @@ def getTemp(history: tuple[dict[int, float], dict[int, float]]):
             avgTemp = -100  # No measurement made in period
             with open(TEMP_AVG_FILE, mode="w", encoding="utf-8") as f:
                 f.write(f"{avgTemp:.1f}\n")
-    min = now.minute % HUMID_AVERAGE_MIN
-    histHumid = histHumidD.get(min, -100)
+    nowmin = now.minute % HUMID_AVERAGE_MIN
+    histHumid = histHumidD.get(nowmin, -100)
     if histHumid == -100:
-        histHumidD[min] = humid
+        histHumidD[nowmin] = humid
     else:
-        histHumidD[min] = (humid + histHumid) / 2
-    if min == 0:
+        histHumidD[nowmin] = (humid + histHumid) / 2
+    if nowmin == 0:
         # Calculate humid average
         totalHumid = 0.0
         vals = 0

@@ -51,7 +51,7 @@ HUMID_AVERAGE_MIN = (
 )
 HUMID_AVG_FILE = "../monitor_home/humidity_avg.txt"
 
-MONITOR_SCRIPT = "/home/danny/digi-thermostat/monitor_home/get_lan_devices.sh"
+MONITOR_SCRIPT = "/home/danny/monitor_home/get_lan_devices.sh"
 MONITOR_PERIOD = 30  # number of seconds between running monitor script
 TEMP_PERIOD = 30  # number of seconds between reading temp + humidty
 
