@@ -125,6 +125,24 @@ then
 	./dropbox_uploader.sh upload cam0_status.txt external_status.txt > /dev/null 2>&1
 fi
 
+diff -q ${masterstation}/3_status.txt 3_status.txt >/dev/null
+if [ $? -eq 1 ]
+then
+	# echo "Uploading changed external status"
+	cp ${masterstation}/3_status.txt 3_status.txt
+    #TODO: If multiple extermal status's, average the temp and RH and stick in external_status.txt
+	./dropbox_uploader.sh upload 3_status.txt 3_status.txt > /dev/null 2>&1
+fi
+
+diff -q ${masterstation}/4_status.txt 4_status.txt >/dev/null
+if [ $? -eq 1 ]
+then
+	# echo "Uploading changed external status"
+	cp ${masterstation}/4_status.txt 4_status.txt
+    #TODO: If multiple extermal status's, average the temp and RH and stick in external_status.txt
+	./dropbox_uploader.sh upload 4_status.txt 4_status.txt > /dev/null 2>&1
+fi
+
 ./dropbox_uploader.sh download command.txt command.txt > /dev/null 2>&1
 if [ -f command.txt ]
 then
