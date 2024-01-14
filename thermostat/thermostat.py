@@ -400,13 +400,20 @@ def checkPIR(ctx: StationContext, secs: float):
 
 
 def displayOn(ctx: StationContext):
+    # Tell UI that display should be updated
+    with open(DISPLAY_ON_FILE, "w", encoding="utf-8") as f:
+        # Note that contents arent used
+        f.write("ON")
+
     # Turn backlight on to show display
     if ctx.DEBUG:
         print("Turning Backlight on")
-    run([BACKLIGHT_CMD, "-b", "7"], check=False)
+    run([BACKLIGHT_CMD, "-b", "5"], check=False)
 
 
 def displayOff(ctx: StationContext):
+    # Remove file to tell display to stop updating
+    remove(DISPLAY_ON_FILE)
     # Turn backlight off
     if ctx.DEBUG:
         # print(f"UI status: {ctx.ui_process.poll()}")
