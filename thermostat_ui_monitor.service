@@ -1,0 +1,9 @@
+[Unit]
+Description=Thermostat UI Service Monitoring and Reboot
+
+[Service]
+ExecStart=/home/danny/thermostat_ui_monitor.sh
+Restart=always
+
+[Install]
+WantedBy=default.target
