@@ -52,11 +52,11 @@ def sendMessage(ctx: StationContext):
             flickerLED(ctx)
         else:
             print(
-                f"Failed to send message to control station: Response: {resp.status_code}"
+                f"{datetime.now()}: Failed to send message to control station: Response: {resp.status_code}"
             )
 
     except requests.exceptions.RequestException as re:
-        print(f"Failed to send message to control station {re}")
+        print(f"{datetime.now()}: Failed to send message to control station {re}")
 
     return chgState
 
@@ -66,7 +66,9 @@ def newSetTempMsg(ctx: StationContext, msgBytes: bytes):
     ctx.currentManSetTemp = tempMsg.temp
     ctx.setTempTime = datetime.now().timestamp()
     if ctx.DEBUG:
-        print(f"Received Set thermostat temp {ctx.currentManSetTemp/10}C")
+        print(
+            f"{datetime.now()}: Received Set thermostat temp {ctx.currentManSetTemp/10}C"
+        )
     return True
 
 
@@ -76,7 +78,7 @@ def extTempMsg(ctx: StationContext, msgBytes: bytes):
     ctx.windStr = "".join([chr(i) for i in extMsg.windStr])
     if ctx.DEBUG:
         print(
-            f"Received Ext temp {ctx.currentExtTemp/10}C , wind {extMsg.windStr} -> {ctx.windStr}"
+            f"{datetime.now()}: Received Ext temp {ctx.currentExtTemp/10}C , wind {extMsg.windStr} -> {ctx.windStr}"
         )
     # Write to local file for local UI to pick up
     with open(EXTTEMP_FILE, "w", encoding="UTF-8") as fp:
@@ -104,7 +106,7 @@ def setMotd(ctx: StationContext, msgBytes: bytes):
     ctx.currentMotd = checkedBytes.decode("UTF-8")
     if ctx.DEBUG:
         print(
-            f"Received motd expiry {ctx.motdExpiry}: {motdBytes} -> {ctx.currentMotd}"
+            f"{datetime.now()}: Received motd expiry {ctx.motdExpiry}: {motdBytes} -> {ctx.currentMotd}"
         )
     # Write to local file
     with open(MOTD_FILE, "w", encoding="UTF-8") as fp:
@@ -120,7 +122,7 @@ def setCurrentTempMsg(ctx: StationContext, msgBytes: bytes):
     ctx.lastTempTime = datetime.now().timestamp()
     if ctx.DEBUG:
         print(
-            f"Received current temp {ctx.currentTemp/10}C, humidity {ctx.currentHumidity/10}"
+            f"{datetime.now()}: Received current temp {ctx.currentTemp/10}C, humidity {ctx.currentHumidity/10}"
         )
     return False
 
@@ -130,7 +132,9 @@ def setScheduleMsg(ctx: StationContext, msgBytes: bytes):
     elem = ScheduleElement(sched.day, sched.start, sched.end, sched.temp)
     ctx.schedules.add(elem)
     if ctx.DEBUG:
-        print(f"Received schedule {elem} total schedules: {len(ctx.schedules)}")
+        print(
+            f"{datetime.now()}: Received schedule {elem} total schedules: {len(ctx.schedules)}"
+        )
     saveSchedules(ctx)
     # Return true as will be receiving new schedules
     return True
@@ -141,7 +145,7 @@ def deleteAllSchedulesMsg(ctx: StationContext):
     if path.exists(LOCAL_SCHEDULE_FILE):
         remove(LOCAL_SCHEDULE_FILE)
     if ctx.DEBUG:
-        print("Deleted all schedules")
+        print(f"{datetime.now()}: Deleted all schedules")
 
     # Return true as will be receiving new schedules
     return True
@@ -156,7 +160,9 @@ def readSchedules(ctx: StationContext):
         for sched in ctx.schedules:
             sched.temp = sched.temp / 10.0
     else:
-        print(f"Locally saved schedule file {LOCAL_SCHEDULE_FILE} not found ")
+        print(
+            f"{datetime.now()}: Locally saved schedule file {LOCAL_SCHEDULE_FILE} not found "
+        )
 
 
 def saveSchedules(ctx: StationContext):
@@ -174,7 +180,7 @@ def setHolidayMsg(ctx: StationContext, msgBytes: bytes):
     HolidayStr.saveToFile(LOCAL_HOLIDAY_FILE, hols)
     if ctx.DEBUG:
         print(
-            f"Received new holiday: start: {datetime.fromtimestamp(holiday.startDate)} end: {datetime.fromtimestamp(holiday.endDate)}"
+            f"{datetime.now()}: Received new holiday: start: {datetime.fromtimestamp(holiday.startDate)} end: {datetime.fromtimestamp(holiday.endDate)}"
         )
     return True
 
@@ -211,7 +217,7 @@ def processResponseMsg(ctx: StationContext, resp: requests.Response):
     calc_crc = crc_func(msgBytes) & 0xFFFF
     if calc_crc != crc:
         print(
-            f"Failed to receive correct CRC for message: {respContent} Bytes: {msgBytes} Calc-CRC: {calc_crc:X} rx-CRC: {crc:X}"
+            f"{datetime.now()}: Failed to receive correct CRC for message: {respContent} Bytes: {msgBytes} Calc-CRC: {calc_crc:X} rx-CRC: {crc:X}"
         )
     else:
         msgArray = bytearray()
@@ -408,7 +414,7 @@ def displayOn(ctx: StationContext):
     # Turn backlight on to show display
     if ctx.DEBUG:
         print("Turning Backlight on")
-    run([BACKLIGHT_CMD, "-b", "5"], check=False)
+    run([BACKLIGHT_CMD, "-b", ctx.BACKLIGHT_BRIGHT], check=False)
 
 
 def displayOff(ctx: StationContext):
@@ -446,10 +452,28 @@ def runLoop(ctx: StationContext):
                     ctx.currentManSetTemp = float(tempStr) * 10
                     chgState = True
                     if ctx.DEBUG:
-                        print(f"Local Set temp set: {ctx.currentManSetTemp/10} ")
+                        print(
+                            f"{nowTime}: Local Set temp set: {ctx.currentManSetTemp/10} "
+                        )
                     remove(SET_TEMP_FILE)
                 except:
-                    print("Set Temp: Failed")
+                    print(f"{nowTime}: Set Temp: Failed")
+                    ctx.currentManSetTemp = -1000
+        # Check for a local boost file - this is set by the GUI
+        if path.exists(BOOST_FILE):
+            with open(BOOST_FILE, "r", encoding="utf-8") as f:
+                try:
+                    boostStr: str = f.readline()
+                    # if "ON" in boostStr:
+                    #     ctx.boostTime = nowSecs
+                    # else:
+                    #     ctx.boostTime = 0
+                    # chgState = True
+                    if ctx.DEBUG:
+                        print(f"{nowTime}: BOOST: {boostStr} ")
+                    remove(BOOST_FILE)
+                except:
+                    print(f"{nowTime}: Boost read: Failed")
                     ctx.currentManSetTemp = -1000
         if (nowSecs - ctx.lastTempTime) > ctx.TEMP_PERIOD:
             # Not received a temp update from control for more than a set period - read local
@@ -461,7 +485,7 @@ def runLoop(ctx: StationContext):
             ctx.currentHumidity *= 10
             if ctx.DEBUG:
                 print(
-                    f"Read local temp: {ctx.currentTemp/10} Humidity: {ctx.currentHumidity/10}"
+                    f"{nowTime}: Read local temp: {ctx.currentTemp/10} Humidity: {ctx.currentHumidity/10}"
                 )
 
         if (nowSecs - ctx.setTempTime) > ctx.SET_TEMP_PERIOD:
@@ -493,7 +517,8 @@ def runLoop(ctx: StationContext):
         #         f"{nowTime}: Calculated Set temp: {ctx.currentSetTemp} Sched temp: {schedSetTemp} Holiday temp: {holidayTemp} Current Temp: {ctx.currentTemp}\n"
         #     )
         if not ctx.currentBoilerStatus and (
-            ctx.currentTemp < ctx.currentSetTemp and ctx.currentTemp != -1000
+            (ctx.currentTemp < ctx.currentSetTemp and ctx.currentTemp != -1000)
+            or nowSecs - ctx.boostTime < ctx.BOOST_PERIOD
         ):
             # Only turn on heating if have a valid temp reading
             relay_on(ctx)
@@ -501,8 +526,9 @@ def runLoop(ctx: StationContext):
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: HEAT ON")
-        elif ctx.currentBoilerStatus and ctx.currentTemp > (
-            ctx.currentSetTemp + ctx.HYSTERISIS
+        elif ctx.currentBoilerStatus and (
+            ctx.currentTemp > (ctx.currentSetTemp + ctx.HYSTERISIS)
+            and ctx.boostTime == 0
         ):
             relay_off(ctx)
             ctx.currentBoilerStatus = 0
@@ -544,7 +570,8 @@ if __name__ == "__main__":
 
     # # Read temp from DHT22
     # (currentTemp, humidity) = readTemp(False)
-    context.lastTempTime = 0
+
+    context.lastTempTime = datetime.now().timestamp()
     context.lastMessageTime = 0
 
     context.reset = 1
