@@ -16,14 +16,17 @@ from filelock import FileLock, Timeout
 from common.messages import *
 
 # from capture_camera import monitorAndRecord
-from common.humidity_sensor import readTemp
+from common.humidity_sensor import readTemp, readSHTC3Temp
+
+
+monitorScriptProcess: Process
 
 
 def getTemp(history: tuple[dict[int, float], dict[int, float]]):
     # Read temp and humidity from sensor and write them to a file
     # This caters for the fact that reading from these can be slow (seconds)
     # and so allows the web server to read the file quickly and respond quickly
-    (temp, humid) = readTemp()
+    (temp, humid) = readSHTC3Temp()
     # Write out temps to be used by controlstation
     print(f"Latest temp: {temp}, humid {humid}")
     with open(TEMPERATURE_FILE_NEW, mode="w", encoding="utf-8") as f:
@@ -133,6 +136,7 @@ app = Flask(__name__)
 @postfork
 def setup():
     global lock
+    global monitorScriptProcess
     try:
         if lock.acquire(1):
             print("Starting monitoring threads")
@@ -146,6 +150,11 @@ def setup():
     except Timeout:
         print("This thread skipping creating monitoring threads")
         pass
+
+
+def goodbyte():
+    global monitorScriptProcess
+    monitorScriptProcess.terminate()
 
 
 def getNoMessage():

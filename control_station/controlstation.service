@@ -4,6 +4,7 @@ Description=Control station to send commands to and receive telemetry from Digit
 [Service]
 #Environment= MY_ENVIRONMENT_VAR =/path/to/file.config
 WorkingDirectory=/home/danny/control_station
+User=danny
 #ExecStart=uwsgi --http 0.0.0.0:5000 --rem-header Content-type --master --uid danny --gid danny --workers 4 -w controlstation:app --plugin python3 -H /home/danny/control_station/ --enable-threads --env HOME=/home/danny/control_station
 ExecStart=/home/danny/control_station/controlstation.sh
 Restart=on-failure

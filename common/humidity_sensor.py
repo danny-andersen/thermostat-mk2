@@ -3,16 +3,28 @@ from os import stat, path, remove
 import glob
 import re
 
+from board import D18, I2C
 import adafruit_dht
-from board import D18
+import adafruit_shtc3
+
 
 THERM_FILE = "/sys/bus/w1/devices/28*/w1_slave"
 # THERM_FILE = "w1_slave"
 
 
+def readSHTC3Temp():
+    i2c = I2C()  # uses board.SCL and board.SDA
+    sht = adafruit_shtc3.SHTC3(i2c)
+    temperature, humidity = sht.measurements
+    print(f"Temperature: {temperature:0.1f} C")
+    print("Humidity: {humidity:0.1f}%")
+    return (temperature, humidity)
+
+
 def readDHTTemp():
     # Read DHT22 device
     dht_device = adafruit_dht.DHT22(pin=D18, use_pulseio=False)
+    dht_device._trig_wait = 900
     retryCount = 0
     gotValue = False
     # Try reading the device three times
@@ -28,7 +40,7 @@ def readDHTTemp():
             if humidity is not None and temperature is not None:
                 gotValue = True
             else:
-                sleep(1)
+                sleep(2)
         except RuntimeError as re:
             print(re)
             sleep(2)

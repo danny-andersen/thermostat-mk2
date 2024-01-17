@@ -3,6 +3,7 @@ pigpio
 gpiozero
 adafruit-dht
 adafruit-circuitpython-dht
+adafruit-circuitpython-shtc3
 filelock
 requests
 crcmod

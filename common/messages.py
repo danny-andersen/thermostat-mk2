@@ -38,6 +38,7 @@ STATUS_FILE = "status.txt"
 STATION_FILE = "-context.json"
 RESET_FILE = "resetReq.txt"
 DISPLAY_ON_FILE = "displayOn.txt"
+BOOST_FILE = "boost.txt"
 TEMPERATURE_FILE_NEW = "../monitor_home/temperature.txt"
 HUMIDITY_FILE_NEW = "../monitor_home/humidity.txt"
 TEMPERATURE_FILE = "../monitor_home/temp_avg.txt"
@@ -459,6 +460,7 @@ class StationContext:
     lastMessageTime = 0
     lastTempTime = 0
     lastPirTime = 0
+    boostTime = 0
     pir_stat = 0
     currentSentThermTemp = 1000.0
     manHolidayTemp = 1000.0
@@ -484,6 +486,8 @@ class StationContext:
     DEFAULT_TEMP = 10.0
     SET_TEMP_PERIOD: int = 3600
     DEBUG = False
+    BOOST_PERIOD = 15 * 60
+    BACKLIGHT_BRIGHT = 5
 
     schedules: {ScheduleElement} = set()
     currentHoliday: Holiday = Holiday()
@@ -506,6 +510,7 @@ class StationContext:
             self.DEBUG = bool(setup_cfg["DEBUG"])
             self.stationNo = int(setup_cfg["station_num"])
             self.controlstation_url = setup_cfg["controlstation_url"]
+            self.BACKLIGHT_BRIGHT = setup_cfg["BACKLIGHT_BRIGHT"]
 
             gpio_cfg = self.config["GPIO"]
             self.RELAY_OUT = int(gpio_cfg["RELAY_OUT"])
@@ -520,6 +525,7 @@ class StationContext:
             self.SET_TEMP_PERIOD = int(timings_cfg["SET_TEMP_PERIOD"])
             self.GET_MSG_PERIOD = int(timings_cfg["GET_MSG_PERIOD"])
             self.PIR_TRIGGER_PERIOD = int(timings_cfg["PIR_TRIGGER_PERIOD"])
+            self.BOOST_PERIOD = int(timings_cfg["BOOST_PERIOD"])
             # print(f"TEMP PERIOD: {self.TEMP_PERIOD}, MSG_PERIOD: {self.GET_MSG_PERIOD}")
 
     # def __init__(self, stn) -> None:

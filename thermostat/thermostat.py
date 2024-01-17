@@ -14,7 +14,7 @@ import crcmod.predefined
 
 # import sys
 # sys.path.insert(0, "../common")
-from common.humidity_sensor import readTemp
+from common.humidity_sensor import readSHTC3Temp
 from common.messages import *
 
 
@@ -480,7 +480,7 @@ def runLoop(ctx: StationContext):
             ctx.lastTempTime = nowSecs
             # While not getting temp from control station, read locally more regularly
             ctx.TEMP_PERIOD = ctx.GET_MSG_PERIOD
-            (ctx.currentTemp, ctx.currentHumidity) = readTemp(False)
+            (ctx.currentTemp, ctx.currentHumidity) = readSHTC3Temp()
             ctx.currentTemp *= 10
             ctx.currentHumidity *= 10
             if ctx.DEBUG:
