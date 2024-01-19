@@ -499,12 +499,12 @@ def runLoop(ctx: StationContext):
         # currentManSetTemp is one that has been set onscreen or sent remotely
         # schedSetTemp is one from the current schedule
         # holidayTemp is set if we are in a holiday period
-        # Precedence: currentSetTemp > holidayTemp > schedSetTemp
+        # Precedence:  holidayTemp >currentSetTemp > schedSetTemp
         saveTemp = ctx.currentSetTemp
-        if ctx.currentManSetTemp != -1000:
-            ctx.currentSetTemp = ctx.currentManSetTemp
-        elif holidayTemp != -1000:
+        if holidayTemp != -1000:
             ctx.currentSetTemp = holidayTemp
+        elif ctx.currentManSetTemp != -1000:
+            ctx.currentSetTemp = ctx.currentManSetTemp
         elif schedSetTemp != -1000:
             ctx.currentSetTemp = schedSetTemp
         else:
