@@ -4,6 +4,7 @@ import copy
 from multiprocessing import Process
 from time import sleep
 import subprocess
+import atexit
 
 from ctypes import *
 from flask import *
@@ -145,6 +146,7 @@ def setup():
             # cameraProcess.start()
             monitorScriptProcess = Process(target=runMonitorScript, daemon=True)
             monitorScriptProcess.start()
+            atexit.register(stopMonitoring)
             sleep(10)
             lock.release()
     except Timeout:
@@ -152,9 +154,17 @@ def setup():
         pass
 
 
-def goodbyte():
+@signal(3)
+def stopMonitoring():
     global monitorScriptProcess
-    monitorScriptProcess.terminate()
+    print("SIGQUIT received: stopping monitor process")
+    if monitorScriptProcess:
+        print("Terminating monitor process")
+        monitorScriptProcess.terminate()
+        sleep(0.5)
+        if monitorScriptProcess.is_alive():
+            print("Killing monitor process")
+            monitorScriptProcess.kill()
 
 
 def getNoMessage():
