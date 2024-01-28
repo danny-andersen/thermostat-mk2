@@ -63,12 +63,19 @@ def sendMessage(ctx: StationContext):
 
 def newSetTempMsg(ctx: StationContext, msgBytes: bytes):
     tempMsg = Temp.unpack(msgBytes)
-    ctx.currentManSetTemp = tempMsg.temp
-    ctx.setTempTime = datetime.now().timestamp()
-    if ctx.DEBUG:
-        print(
-            f"{datetime.now()}: Received Set thermostat temp {ctx.currentManSetTemp/10}C"
-        )
+    if tempMsg.temp > 100:
+        ctx.currentManSetTemp = tempMsg.temp
+        ctx.setTempTime = datetime.now().timestamp()
+        if ctx.DEBUG:
+            print(
+                f"{datetime.now()}: Received Set thermostat temp {ctx.currentManSetTemp/10}C"
+            )
+    else:
+        if ctx.DEBUG:
+            print(
+                f"{datetime.now()}: Ignoring invalid thermostat temp {tempMsg.temp/10}C"
+            )
+
     return True
 
 
@@ -449,12 +456,16 @@ def runLoop(ctx: StationContext):
                 try:
                     tempStr = f.readline()
                     # print(f"Set temp str {str[:strLen-1]}")
-                    ctx.currentManSetTemp = float(tempStr) * 10
-                    chgState = True
-                    if ctx.DEBUG:
-                        print(
-                            f"{nowTime}: Local Set temp set: {ctx.currentManSetTemp/10} "
-                        )
+                    newSetTemp = float(tempStr) * 10
+                    if newSetTemp > 100:
+                        ctx.currentManSetTemp = newSetTemp
+                        chgState = True
+                        if ctx.DEBUG:
+                            print(
+                                f"{nowTime}: Local Set temp set: {ctx.currentManSetTemp/10} "
+                            )
+                    else:
+                        print(f"Ignoring set temp of {newSetTemp}")
                     remove(SET_TEMP_FILE)
                 except:
                     print(f"{nowTime}: Set Temp: Failed")

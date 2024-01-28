@@ -392,7 +392,7 @@ def getMotd(sc: StationContext = None):
             sc.motdTime = stat(MOTD_FILE).st_mtime
             sc.tempMotdTime = 0
             motdStr = motdStr[: len(motdStr) - 1]
-            resp = createMotd(str, exp)
+            resp = createMotd(motdStr, exp)
     else:
         resp = getDefaultMotd()
         sc.motdTime = 0
@@ -413,9 +413,9 @@ def createResetMsg():
     return Response(response=msgBytes, mimetype="application/octet-stream")
 
 
-def createMotd(str, motdExpiry=TEMP_MOTD_EXPIRY_SECS * 1000):
-    strLen = len(str) if len(str) < MAX_MOTD_SIZE - 1 else MAX_MOTD_SIZE - 1
-    motdStr = bytes(str[:strLen], encoding="utf-8")
+def createMotd(newMotd, motdExpiry=TEMP_MOTD_EXPIRY_SECS * 1000):
+    strLen = len(newMotd) if len(newMotd) < MAX_MOTD_SIZE - 1 else MAX_MOTD_SIZE - 1
+    motdStr = bytes(newMotd[:strLen], encoding="utf-8")
     motdLen = len(motdStr) + 1
 
     # print(f"Str len; {strLen}")

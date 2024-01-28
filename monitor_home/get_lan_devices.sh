@@ -20,7 +20,7 @@ cd "$(dirname "$0")"
 
 device_change_file=$(date +%Y%m%d)"_device_change.txt"
 sensor_dir=/sys/bus/w1/devices/28-051673fdeeff
-masterstation=../masterstation
+masterstation=../control_station
 video_picture_dir=motion_images/
 safeDevice=`cat safeDevices.txt`
 uploadStatus=N
@@ -115,14 +115,14 @@ then
     >cam0_status.txt
 fi
 
-diff -q ${masterstation}/2_status.txt cam0_status.txt >/dev/null
+diff -q ${masterstation}/2_status.txt 2_status.txt >/dev/null
 if [ $? -eq 1 ]
 then
 	# echo "Uploading changed external status"
-	cp ${masterstation}/2_status.txt cam0_status.txt
+	cp ${masterstation}/2_status.txt 2_status.txt
     #TODO: If multiple extermal status's, average the temp and RH and stick in external_status.txt
-	./dropbox_uploader.sh upload cam0_status.txt cam0_status.txt > /dev/null 2>&1
-	./dropbox_uploader.sh upload cam0_status.txt external_status.txt > /dev/null 2>&1
+	./dropbox_uploader.sh upload 2_status.txt 2_status.txt > /dev/null 2>&1
+	./dropbox_uploader.sh upload 2_status.txt external_status.txt > /dev/null 2>&1
 fi
 
 diff -q ${masterstation}/3_status.txt 3_status.txt >/dev/null
