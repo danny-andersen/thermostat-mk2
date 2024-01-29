@@ -23,6 +23,7 @@ device_change_file=$(date +%Y%m%d)"_cam${1}_change.txt"
 video_picture_dir=$2
 uploadStatus=N
 COMMAND_FILE=command-cam${1}.txt
+only_monitor_when_noones_home=Y
 
 # echo Running check status with ${1} and $2
 #Check wifi up
@@ -80,12 +81,50 @@ then
     rm command.txt
 fi
 
-#Check if motion is running
-sudo service motion status >/dev/null
-if [ $? -ne 0 ]
+#Check whether we should enable cameras
+#For internal cameras only enable when no-one's home
+if [ $only_monitor_when_noones_home = 'Y' ]
 then
-    #Motion isnt running
-	sudo service motion start
+    #Check if anyone's home
+    safeDevice=`cat safeDevices.txt`
+    dev=$(echo $safeDevice | sed 's/|/ /g')
+    home_alone="Y"
+    for d in $dev
+    do
+        ping -c2 $d > /dev/null 2>&1
+        if [ $? == 0 ]
+        then
+            #Device on network
+            home_alone="N"
+        fi
+    done
+    #Check if motion is running
+    sudo service motion status >/dev/null
+    if [ $? -ne 0 ]
+    then
+        if [ $home_alone = "Y" ]
+        then
+            #Motion isnt running
+            echo "No ones home and motion isnt running"
+            sudo service motion start
+        fi
+    else
+        if [ $home_alone = "N" ]
+        then
+            #Motion is running but someones home
+            echo "Stopping motion service"
+            sudo service motion stop
+        fi
+    fi
+else
+    #Check if motion is running
+    sudo service motion status >/dev/null
+    if [ $? -ne 0 ]
+    then
+        #Motion isnt running
+        echo "Motion service isnt running ??"
+        sudo service motion start
+    fi
 fi
 
 # echo "Looking for media files and uploading"
