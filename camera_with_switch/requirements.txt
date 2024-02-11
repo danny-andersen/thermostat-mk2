@@ -1,0 +1,7 @@
+RPi.GPIO
+pigpio
+gpiozero
+requests
+crcmod
+jsonpickle
+

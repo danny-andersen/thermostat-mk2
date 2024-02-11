@@ -1,0 +1,12 @@
+[Unit]
+Description=Service to control central heating and provide a GUI
+
+[Service]
+User=danny
+WorkingDirectory=/home/danny/thermostat
+ExecStart=/home/danny/thermostat/startThermostat.sh
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+

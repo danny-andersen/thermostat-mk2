@@ -461,6 +461,7 @@ class StationContext:
     lastTempTime = 0
     lastPirTime = 0
     boostTime = 0
+    button_start_time = 0
     pir_stat = 0
     currentSentThermTemp = 1000.0
     manHolidayTemp = 1000.0
@@ -471,6 +472,9 @@ class StationContext:
     reset = 0
     controlStationUrl = ""
     ui_process = None
+    relay_on = False
+    video_dir = ""
+    CHECK_WIFI_SCRIPT = ""
 
     # Constants overriden by .ini file
     RELAY_OUT = 27
@@ -479,8 +483,10 @@ class StationContext:
     RED_LED = 24
     BLUE_LED = 25
     TEMP_SENSOR: int = 18
+    SWITCH_IN: int = 18
     TEMP_PERIOD: int = 60
     PIR_TRIGGER_PERIOD = 30
+    SWITCH_TRIGGER_PERIOD = 300
     HYSTERISIS: float = 0.2
     GET_MSG_PERIOD = 15
     DEFAULT_TEMP = 10.0
@@ -488,6 +494,7 @@ class StationContext:
     DEBUG = False
     BOOST_PERIOD = 15 * 60
     BACKLIGHT_BRIGHT = 5
+    MONITOR_PERIOD = 30
 
     schedules: {ScheduleElement} = set()
     currentHoliday: Holiday = Holiday()
@@ -498,6 +505,7 @@ class StationContext:
     greenLED = None
     blueLED = None
     pir = None
+    switch = None
 
     def __init__(self, stn=-1, configFile="") -> None:
         self.stationNo = stn
@@ -505,27 +513,34 @@ class StationContext:
             # Load initial config from config file
             self.config.read(configFile)
             setup_cfg = self.config["setup"]
-            self.HYSTERISIS = float(setup_cfg["HYSTERISIS"])
+            self.HYSTERISIS = float(setup_cfg.get("HYSTERISIS", 0))
             self.DEFAULT_TEMP = float(setup_cfg["DEFAULT_TEMP"])
             self.DEBUG = bool(setup_cfg["DEBUG"])
             self.stationNo = int(setup_cfg["station_num"])
             self.controlstation_url = setup_cfg["controlstation_url"]
             self.BACKLIGHT_BRIGHT = setup_cfg["BACKLIGHT_BRIGHT"]
+            self.video_dir = setup_cfg.get("video_dir", "")
+            self.CHECK_WIFI_SCRIPT = setup_cfg.get("CHECK_WIFI_SCRIPT", "")
 
             gpio_cfg = self.config["GPIO"]
             self.RELAY_OUT = int(gpio_cfg["RELAY_OUT"])
             self.PIR_IN = int(gpio_cfg["PIR_IN"])
             self.GREEN_LED = int(gpio_cfg["GREEN_LED"])
             self.RED_LED = int(gpio_cfg["RED_LED"])
-            self.BLUE_LED = int(gpio_cfg["BLUE_LED"])
+            self.BLUE_LED = int(gpio_cfg.get("BLUE_LED", 0))
             self.TEMP_SENSOR = int(gpio_cfg["TEMP_SENSOR"])
+            self.SWITCH_IN = int(gpio_cfg["SWITCH_IN"])
 
             timings_cfg = self.config["timings"]
             self.TEMP_PERIOD = int(timings_cfg["TEMP_PERIOD"])
             self.SET_TEMP_PERIOD = int(timings_cfg["SET_TEMP_PERIOD"])
             self.GET_MSG_PERIOD = int(timings_cfg["GET_MSG_PERIOD"])
-            self.PIR_TRIGGER_PERIOD = int(timings_cfg["PIR_TRIGGER_PERIOD"])
+            self.PIR_TRIGGER_PERIOD = int(timings_cfg.get("PIR_TRIGGER_PERIOD", 30))
+            self.SWITCH_TRIGGER_PERIOD = int(
+                timings_cfg.get("SWITCH_TRIGGER_PERIOD", 300)
+            )
             self.BOOST_PERIOD = int(timings_cfg["BOOST_PERIOD"])
+            self.MONITOR_PERIOD = int(timings_cfg.get("MONITOR_PERIOD", 30))
             # print(f"TEMP PERIOD: {self.TEMP_PERIOD}, MSG_PERIOD: {self.GET_MSG_PERIOD}")
 
     # def __init__(self, stn) -> None:
