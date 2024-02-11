@@ -177,11 +177,20 @@ def saveSchedules(ctx: StationContext):
 
 
 def setHolidayMsg(ctx: StationContext, msgBytes: bytes):
-    if len(msgBytes) == 13:
+    # for b in msgBytes:
+    #     print(b)
+    if len(msgBytes) >= 13:
         hols: HolidayStr = HolidayStr.unpack(msgBytes)
     else:
         # old school message with no mins set
         hols: HolidayStr = HolidayStr.unpackNoMins(msgBytes)
+    if ctx.DEBUG:
+        print(
+            f"Hols Start: {hols.startDate.year} {hols.startDate.month} {hols.startDate.dayOfMonth} {hols.startDate.hour} {hols.startDate.min}"
+        )
+        print(
+            f"Hols End: {hols.endDate.year} {hols.endDate.month} {hols.endDate.dayOfMonth} {hols.endDate.hour} {hols.endDate.min}"
+        )
     holiday: Holiday = Holiday(hols)
     ctx.currentHoliday = holiday
     HolidayStr.saveToFile(LOCAL_HOLIDAY_FILE, hols)
