@@ -475,6 +475,7 @@ class StationContext:
     relay_on = False
     video_dir = ""
     CHECK_WIFI_SCRIPT = ""
+    camera_motion = False
 
     # Constants overriden by .ini file
     RELAY_OUT = 27
@@ -514,32 +515,32 @@ class StationContext:
             self.config.read(configFile)
             setup_cfg = self.config["setup"]
             self.HYSTERISIS = float(setup_cfg.get("HYSTERISIS", 0))
-            self.DEFAULT_TEMP = float(setup_cfg["DEFAULT_TEMP"])
+            self.DEFAULT_TEMP = float(setup_cfg.get("DEFAULT_TEMP", 10.0))
             self.DEBUG = bool(setup_cfg["DEBUG"])
             self.stationNo = int(setup_cfg["station_num"])
             self.controlstation_url = setup_cfg["controlstation_url"]
-            self.BACKLIGHT_BRIGHT = setup_cfg["BACKLIGHT_BRIGHT"]
+            self.BACKLIGHT_BRIGHT = setup_cfg.get("BACKLIGHT_BRIGHT", 1)
             self.video_dir = setup_cfg.get("video_dir", "")
             self.CHECK_WIFI_SCRIPT = setup_cfg.get("CHECK_WIFI_SCRIPT", "")
 
             gpio_cfg = self.config["GPIO"]
-            self.RELAY_OUT = int(gpio_cfg["RELAY_OUT"])
-            self.PIR_IN = int(gpio_cfg["PIR_IN"])
-            self.GREEN_LED = int(gpio_cfg["GREEN_LED"])
-            self.RED_LED = int(gpio_cfg["RED_LED"])
-            self.BLUE_LED = int(gpio_cfg.get("BLUE_LED", 0))
-            self.TEMP_SENSOR = int(gpio_cfg["TEMP_SENSOR"])
-            self.SWITCH_IN = int(gpio_cfg["SWITCH_IN"])
+            self.RELAY_OUT = int(gpio_cfg.get("RELAY_OUT", 27))
+            self.PIR_IN = int(gpio_cfg.get("PIR_IN", 17))
+            self.GREEN_LED = int(gpio_cfg.get("GREEN_LED", 23))
+            self.RED_LED = int(gpio_cfg.get("RED_LED", 24))
+            self.BLUE_LED = int(gpio_cfg.get("BLUE_LED", 25))
+            self.TEMP_SENSOR = int(gpio_cfg.get("TEMP_SENSOR", 18))
+            self.SWITCH_IN = int(gpio_cfg.get("SWITCH_IN", 18))
 
             timings_cfg = self.config["timings"]
-            self.TEMP_PERIOD = int(timings_cfg["TEMP_PERIOD"])
-            self.SET_TEMP_PERIOD = int(timings_cfg["SET_TEMP_PERIOD"])
-            self.GET_MSG_PERIOD = int(timings_cfg["GET_MSG_PERIOD"])
+            self.TEMP_PERIOD = int(timings_cfg.get("TEMP_PERIOD", 60))
+            self.SET_TEMP_PERIOD = int(timings_cfg.get("SET_TEMP_PERIOD", 3600))
+            self.GET_MSG_PERIOD = int(timings_cfg.get("GET_MSG_PERIOD", 15))
             self.PIR_TRIGGER_PERIOD = int(timings_cfg.get("PIR_TRIGGER_PERIOD", 30))
             self.SWITCH_TRIGGER_PERIOD = int(
                 timings_cfg.get("SWITCH_TRIGGER_PERIOD", 300)
             )
-            self.BOOST_PERIOD = int(timings_cfg["BOOST_PERIOD"])
+            self.BOOST_PERIOD = int(timings_cfg.get("BOOST_PERIOD", 900))
             self.MONITOR_PERIOD = int(timings_cfg.get("MONITOR_PERIOD", 30))
             # print(f"TEMP PERIOD: {self.TEMP_PERIOD}, MSG_PERIOD: {self.GET_MSG_PERIOD}")
 

@@ -1,0 +1,13 @@
+[Unit]
+Description=Motion detection video capture daemon
+Documentation=man:motion(1)
+
+[Service]
+Type=simple
+User=danny
+ExecStart=/usr/bin/motion -c /home/danny/camera_with_switch/conservatory-motion.cfg
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

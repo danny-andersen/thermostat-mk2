@@ -176,3 +176,9 @@ camera_station/motion.pem
 camera_station/motion.key
 camera_station/motion.p12
 camera_station/*.pgm
+camera_with_switch/*.cfg
+camera_with_switch/motion.pem
+camera_with_switch/motion.key
+camera_with_switch/motion.p12
+camera_with_switch/*.pgm
+camera_with_switch/camera_switch.ini

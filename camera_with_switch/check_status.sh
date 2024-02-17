@@ -23,7 +23,7 @@ device_change_file=$(date +%Y%m%d)"_cam${1}_change.txt"
 video_picture_dir=$2
 uploadStatus=N
 COMMAND_FILE=command-cam${1}.txt
-only_monitor_when_noones_home=Y
+only_monitor_when_noones_home=N
 
 # echo Running check status with ${1} and $2
 #Check wifi up
@@ -116,15 +116,15 @@ then
             sudo service motion stop
         fi
     fi
-else
-    #Check if motion is running
-    sudo service motion status >/dev/null
-    if [ $? -ne 0 ]
-    then
-        #Motion isnt running
-        echo "Motion service isnt running ??"
-        sudo service motion start
-    fi
+# else
+#     #Check if motion is running
+#     sudo service motion status >/dev/null
+#     if [ $? -ne 0 ]
+#     then
+#         #Motion isnt running
+#         echo "Motion service isnt running ??"
+#         sudo service motion start
+#     fi
 fi
 
 # echo "Looking for media files and uploading"

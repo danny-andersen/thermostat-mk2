@@ -1,5 +1,5 @@
-python -m venv /home/danny/thermostat
-cd /home/danny/thermostat
+python -m venv /home/danny/camera_with_switch
+cd /home/danny/camera_with_switch
 ln -s ../common common
 source bin/activate
 python -m pip install --upgrade pip

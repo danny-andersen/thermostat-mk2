@@ -1,10 +1,10 @@
 [Unit]
-Description=Service to control central heating and provide a GUI
+Description=Service to control external lights
 
 [Service]
 User=danny
-WorkingDirectory=/home/danny/thermostat
-ExecStart=/home/danny/thermostat/startThermostat.sh
+WorkingDirectory=/home/danny/camera_with_switch
+ExecStart=/home/danny/camera_with_switch/startCameraSwitch.sh
 Restart=on-failure
 
 [Install]
