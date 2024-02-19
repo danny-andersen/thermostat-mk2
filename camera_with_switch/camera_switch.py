@@ -1,6 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 import requests
+from multiprocessing import Process
+import atexit
 import subprocess
 
 from os import listdir
@@ -17,6 +19,8 @@ from common.messages import *
 
 # Use a global as switch callback needs it
 ctx: StationContext = None
+monitorScriptProcess: Process
+lastTimePressed: datetime
 
 
 # Format = /message?
@@ -56,16 +60,27 @@ def sendMessage():
 
 
 def button_pressed():
+    global lastTimePressed
+    global ctx
+
+    nowTime = datetime.now()
+    deltaPressed = nowTime - lastTimePressed
+    if deltaPressed < timedelta(milliseconds=100):
+        # Only triggered less than 100ms ago - ignore
+        if ctx.DEBUG:
+            print(f"{nowTime}: Debounce: Delta {deltaPressed}")
+        return
+    lastTimePressed = nowTime
     if ctx.DEBUG:
-        print(f"{datetime.now()}: BUTTON pressed")
+        print(f"{nowTime}: BUTTON pressed: Delta {deltaPressed}")
     if pir_state() or button_state():
         # Button pressed when lights on - turn them off
-        print(f"{datetime.now()}: Turning lights off")
+        print(f"{nowTime}: Turning lights off")
         ctx.button_start_time = 0
         ctx.lastPirTime = 0
     else:
         # Start button period
-        ctx.button_start_time = datetime.now().timestamp()
+        ctx.button_start_time = nowTime.timestamp()
 
 
 def relay_off():
@@ -115,6 +130,32 @@ def pir_state():
     return (datetime.now().timestamp() - ctx.lastPirTime) < ctx.PIR_TRIGGER_PERIOD
 
 
+def stopMonitoring():
+    global monitorScriptProcess
+    print("SIGQUIT received: stopping monitor process")
+    if monitorScriptProcess:
+        print("Terminating monitor process")
+        monitorScriptProcess.terminate()
+        sleep(0.5)
+        if monitorScriptProcess.is_alive():
+            print("Killing monitor process")
+            monitorScriptProcess.kill()
+
+
+def runMonitorScript():
+    print("******Starting monitor script thread loop")
+    lastMonitorTime = 0
+    sleep(15)
+    # Wait until server up and running
+    while True:
+        nowTime = datetime.now().timestamp()
+        if (nowTime - lastMonitorTime) > ctx.MONITOR_PERIOD:
+            # Run the monitor script
+            lastMonitorTime = nowTime
+            runScript()
+        sleep(5)
+
+
 def runLoop():
     while True:
         nowTime = datetime.now()
@@ -139,9 +180,6 @@ def runLoop():
             chgState = True
             if ctx.DEBUG:
                 print(f"{nowTime}: LIGHT OFF")
-        if (nowSecs - ctx.lastMonitorTime) > ctx.MONITOR_PERIOD:
-            runScript()
-            ctx.lastMonitorTime = nowSecs
         motion_state = checkForMotionEvents()
         if motion_state != ctx.camera_motion:
             chgState = True
@@ -151,12 +189,13 @@ def runLoop():
             sendMessage()
             ctx.lastMessageTime = nowSecs
 
-        sleep(1)
+        sleep(0.5)
 
 
 if __name__ == "__main__":
     print("Starting camera-switch service")
     ctx = StationContext(configFile="./camera_switch.ini")
+    lastTimePressed = datetime.now()
 
     ctx.lastMessageTime = 0
 
@@ -170,6 +209,10 @@ if __name__ == "__main__":
     ctx.relay = OutputDevice(ctx.RELAY_OUT, active_high=True, initial_value=False)
 
     sleep(1)
+
+    monitorScriptProcess = Process(target=runMonitorScript, daemon=True)
+    monitorScriptProcess.start()
+    atexit.register(stopMonitoring)
 
     if ctx.DEBUG:
         print("Setup complete")
