@@ -16,6 +16,9 @@ from gpiozero import LightSensor, OutputDevice, Button
 # import sys
 # sys.path.insert(0, "../common")
 from common.messages import *
+import crcmod
+import crcmod.predefined
+
 
 # Use a global as switch callback needs it
 ctx: StationContext = None
@@ -40,7 +43,7 @@ def sendMessage():
     else:
         url_parts.append("&rs=0")
     url_parts.append(f"&p={int(ctx.pir_stat or ctx.camera_motion)}")
-    url_parts.append("&u=1")
+    # url_parts.append("&u=1")
     url_parts.append(f"&r={int(ctx.relay_on)}")
     url = "".join(url_parts)
     chgState = False
@@ -53,10 +56,56 @@ def sendMessage():
             print(
                 f"{datetime.now()}: Failed to send message to control station: Response: {resp.status_code}"
             )
+        else:
+            chgState = processResponseMsg(resp)
+
     except requests.exceptions.RequestException as re:
         print(f"{datetime.now()}: Failed to send message to control station {re}")
 
     return chgState
+
+
+def processResponseMsg(resp: requests.Response):
+    respContent: bytes = resp.content
+    headerBytes: bytes = respContent[0:4]
+    (msgId, mlen, crc) = Message.unpack(headerBytes)
+    msgBytes = bytearray(respContent)
+    msgBytes[2:3] = b"\x00"
+    msgBytes[3:4] = b"\x00"
+    chgState = False
+    # print(f"len: {msg.len}, msg: {msgBytes}")
+    crc_func = crcmod.predefined.mkCrcFun("crc-aug-ccitt")
+    calc_crc = crc_func(msgBytes) & 0xFFFF
+    if calc_crc != crc:
+        print(
+            f"{datetime.now()}: Failed to receive correct CRC for message: {respContent} Bytes: {msgBytes} Calc-CRC: {calc_crc:X} rx-CRC: {crc:X}"
+        )
+    else:
+        msgArray = bytearray()
+        for i in range(4, mlen):
+            msgArray.append(respContent[i])
+        msgBytes: bytes = bytes(msgArray)
+        if msgId == LIGHT_COMMAND_MSG:
+            chgState = light_command(msgBytes)
+        else:
+            if ctx.DEBUG:
+                print(f"Ignoring un-implemented msg {msgId}")
+        return chgState
+
+
+def light_command(msgBytes: bytes):
+    lightMsg = LightMsg.unpack(msgBytes)
+    if lightMsg.lightState == 0:
+        # Turn lights off
+        if ctx.DEBUG:
+            print(f"{datetime.now()}: Lights OFF command rx")
+        ctx.button_start_time = 0
+        ctx.lastPirTime = 0
+    else:
+        if ctx.DEBUG:
+            print(f"{datetime.now()}: Lights ON command rx")
+        ctx.button_start_time = datetime.now().timestamp()
+    return False
 
 
 def button_pressed():
@@ -186,8 +235,10 @@ def runLoop():
             ctx.camera_motion = motion_state
         if chgState or ((nowSecs - ctx.lastMessageTime) > ctx.GET_MSG_PERIOD):
             # Send update in status
-            sendMessage()
-            ctx.lastMessageTime = nowSecs
+            chgState = True
+            while chgState:
+                chgState = sendMessage()
+                ctx.lastMessageTime = nowSecs
 
         sleep(0.5)
 

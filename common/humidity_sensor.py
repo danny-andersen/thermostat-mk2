@@ -16,8 +16,8 @@ def readSHTC3Temp():
     i2c = I2C()  # uses board.SCL and board.SDA
     sht = adafruit_shtc3.SHTC3(i2c)
     temperature, humidity = sht.measurements
-    print(f"Temperature: {temperature:0.2f} C")
-    print(f"Humidity: {humidity:0.2f}%")
+    # print(f"Temperature: {temperature:0.2f} C")
+    # print(f"Humidity: {humidity:0.2f}%")
     return (temperature, humidity)
 
 

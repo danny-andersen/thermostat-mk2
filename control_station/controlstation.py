@@ -29,7 +29,7 @@ def getTemp(history: tuple[dict[int, float], dict[int, float]]):
     # and so allows the web server to read the file quickly and respond quickly
     (temp, humid) = readSHTC3Temp()
     # Write out temps to be used by controlstation
-    print(f"Latest temp: {temp}, humid {humid}")
+    # print(f"Latest temp: {temp}, humid {humid}")
     with open(TEMPERATURE_FILE_NEW, mode="w", encoding="utf-8") as f:
         f.write(f"{temp:.1f}\n")
     with open(HUMIDITY_FILE_NEW, mode="w", encoding="utf-8") as f:
@@ -271,70 +271,82 @@ def getMessage():
         sc.displayOn = pir
     if pir:
         sc.lastPirTime = datetime.now().timestamp()
-    response: Response = getNoMessage()
     updateOnly = args.get("u", type=int, default=0)
-    if not updateOnly:
+    if updateOnly:
+        response: Response = getNoMessage()
+    else:
         # print(f"Station: {stn} Getting next message")
-        if sc.motdExpiry < TEMP_MOTD_EXPIRY_SECS:
-            sc.motdExpiry = TEMP_MOTD_EXPIRY_SECS  # Have a minimum expiry time
+        response: Response = None
+        # Currently only the conservatory camera and thermostat stations (1 and 6)
+        # check for command type messages - the others are purely update only
+        if stn in (1, 6) and path.exists(COMMAND_FILE):
+            response = createCommandMsg(stn)
+        if stn == 1 and response == None:
+            # Thermostat command msg check
+            if sc.motdExpiry < TEMP_MOTD_EXPIRY_SECS:
+                sc.motdExpiry = TEMP_MOTD_EXPIRY_SECS  # Have a minimum expiry time
 
-        checkAndDeleteFile(MOTD_FILE, sc.motdExpiry)
-        checkAndDeleteFile(SET_TEMP_FILE, SET_TEMP_EXPIRY_SECS)
-        checkAndDeleteFile(EXTTEMP_FILE, EXT_TEMP_EXPIRY_SECS)
-        checkAndDeleteFile(HOLIDAY_FILE, SET_TEMP_EXPIRY_SECS)
-        checkAndDeleteFile(SCHEDULE_FILE, SET_SCHED_EXPIRY_SECS)
-        if not path.exists(SCHEDULE_FILE):
-            sc.setSchedTime = 0
-        if sc.tempMotdTime and (
-            datetime.now().timestamp() - sc.tempMotdTime > TEMP_MOTD_EXPIRY_SECS
-        ):
-            # Check if temp motd has expired
-            sc.tempMotdTime = 0
-            sc.motdTime = 0  # Resend any motd
-        if (
-            len(sc.scheduleMsgs) == 0
-            and path.exists(SCHEDULE_FILE)
-            and stat(SCHEDULE_FILE).st_mtime > sc.setSchedTime
-        ):
-            createScheduleMsgs(sc)
-        if len(sc.scheduleMsgs) > 0:
-            response = getNextScheduleMsg(sc)
-            print(f"Number of schedules remaining to send: {len(sc.scheduleMsgs)}")
-        elif path.exists(RESET_FILE):
-            response = createResetMsg()
-        elif (
-            path.exists(SET_TEMP_FILE) and stat(SET_TEMP_FILE).st_mtime > sc.setTempTime
-        ):
-            response = getSetTemp(sc)
-        elif (
-            path.exists(HOLIDAY_FILE)
-            and stat(HOLIDAY_FILE).st_mtime > sc.setHolidayTime
-        ):
-            response = getHoliday(sc)
-        elif path.exists(EXTTEMP_FILE) and stat(EXTTEMP_FILE).st_mtime > sc.extTempTime:
-            response = getExtTemp(sc)
-        elif sc.tempMotd:
-            response = createMotd(sc.tempMotd)
-            sc.tempMotd = None
-            sc.tempMotdTime = datetime.now().timestamp()
-            # motdTime = 0 #Resend motd after temp motd has expired
-        elif (
-            not sc.tempMotdTime
-            and path.exists(MOTD_FILE)
-            and stat(MOTD_FILE).st_mtime > sc.motdTime
-        ):
-            # Only send new motd if temp Motd has timed out
-            response = getMotd(sc)
-            sc.motdTime = stat(MOTD_FILE).st_mtime
-        else:
-            (temp, humidity) = readThermStr()
-            if humidity != -1000:
-                sc.currentHumidity = humidity
-            if temp != -1000:
-                sc.currentTemp = temp
-                response = createThermMsg(temp, humidity)
+            checkAndDeleteFile(MOTD_FILE, sc.motdExpiry)
+            checkAndDeleteFile(SET_TEMP_FILE, SET_TEMP_EXPIRY_SECS)
+            checkAndDeleteFile(EXTTEMP_FILE, EXT_TEMP_EXPIRY_SECS)
+            checkAndDeleteFile(HOLIDAY_FILE, SET_TEMP_EXPIRY_SECS)
+            checkAndDeleteFile(SCHEDULE_FILE, SET_SCHED_EXPIRY_SECS)
+            if not path.exists(SCHEDULE_FILE):
+                sc.setSchedTime = 0
+            if sc.tempMotdTime and (
+                datetime.now().timestamp() - sc.tempMotdTime > TEMP_MOTD_EXPIRY_SECS
+            ):
+                # Check if temp motd has expired
+                sc.tempMotdTime = 0
+                sc.motdTime = 0  # Resend any motd
+            if (
+                len(sc.scheduleMsgs) == 0
+                and path.exists(SCHEDULE_FILE)
+                and stat(SCHEDULE_FILE).st_mtime > sc.setSchedTime
+            ):
+                createScheduleMsgs(sc)
+            if len(sc.scheduleMsgs) > 0:
+                response = getNextScheduleMsg(sc)
+                print(f"Number of schedules remaining to send: {len(sc.scheduleMsgs)}")
+            elif (
+                path.exists(SET_TEMP_FILE)
+                and stat(SET_TEMP_FILE).st_mtime > sc.setTempTime
+            ):
+                response = getSetTemp(sc)
+            elif (
+                path.exists(HOLIDAY_FILE)
+                and stat(HOLIDAY_FILE).st_mtime > sc.setHolidayTime
+            ):
+                response = getHoliday(sc)
+            elif (
+                path.exists(EXTTEMP_FILE)
+                and stat(EXTTEMP_FILE).st_mtime > sc.extTempTime
+            ):
+                response = getExtTemp(sc)
+            elif sc.tempMotd:
+                response = createMotd(sc.tempMotd)
+                sc.tempMotd = None
+                sc.tempMotdTime = datetime.now().timestamp()
+                # motdTime = 0 #Resend motd after temp motd has expired
+            elif (
+                not sc.tempMotdTime
+                and path.exists(MOTD_FILE)
+                and stat(MOTD_FILE).st_mtime > sc.motdTime
+            ):
+                # Only send new motd if temp Motd has timed out
+                response = getMotd(sc)
+                sc.motdTime = stat(MOTD_FILE).st_mtime
             else:
-                pass  # Do something else
+                (temp, humidity) = readThermStr()
+                if humidity != -1000:
+                    sc.currentHumidity = humidity
+                if temp != -1000:
+                    sc.currentTemp = temp
+                    response = createThermMsg(temp, humidity)
+                else:
+                    pass  # Do something else
+        if response == None:
+            response = getNoMessage()
 
     sc.saveStationContext(startContext)
     # Always generate status file to update last heard time
@@ -407,10 +419,50 @@ def getDefaultMotd():
     return createMotd(motdStr, TEMP_MOTD_EXPIRY_SECS * 1000)
 
 
-def createResetMsg():
-    remove(RESET_FILE)
-    msgBytes = getMessageEnvelope(RESET_MSG, bytearray(0), 0)
-    return Response(response=msgBytes, mimetype="application/octet-stream")
+def createCommandMsg(stn):
+    response: Response = None
+    msgBytes: bytes = []
+    command = ""
+    deleteFile = True
+
+    with open(COMMAND_FILE, "r", encoding="utf-8") as f:
+        # Command file format: <stn id>:<command>
+        try:
+            contents = f.readline()
+            if ":" in contents:
+                fields = contents.split(":")
+                if int(fields[0].strip()) == stn:
+                    # For this station
+                    command = fields[1].strip().lower()
+                else:
+                    # For another station so dont delete file
+                    deleteFile = False
+        except:
+            print(f"Set Command: Failed")
+            pass
+    if deleteFile:
+        print(
+            f"{datetime.now()}: Processed command file: Stn: {stn} command: {command}"
+        )
+        remove(COMMAND_FILE)
+    if command == "reset":
+        msgBytes = getMessageEnvelope(RESET_MSG, bytearray(0), 0)
+    elif "light" in command:
+        lightMsg = LightMsg()
+        if "off" in command:
+            lightMsg.lightState = 0
+        elif "on" in command:
+            lightMsg.lightState = 1
+        else:
+            print(f"Invalid light state in light command: {command}")
+            lightMsg = None
+        if lightMsg:
+            msgBytes = getMessageEnvelope(
+                LIGHT_COMMAND_MSG, bytearray(lightMsg), sizeof(LightMsg)
+            )
+    if len(msgBytes) > 0:
+        response = Response(response=msgBytes, mimetype="application/octet-stream")
+    return response
 
 
 def createMotd(newMotd, motdExpiry=TEMP_MOTD_EXPIRY_SECS * 1000):

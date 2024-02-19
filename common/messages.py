@@ -27,6 +27,7 @@ SET_DATE_TIME_MSG = 11
 SET_HOLIDAY_MSG = 12
 SET_THERM_TEMP_MSG = 13
 RESET_MSG = 14
+LIGHT_COMMAND_MSG = 15
 
 MOTD_FILE = "motd.txt"
 MOTD_EXPIRY_SECS = 3600  # an hour
@@ -36,7 +37,7 @@ HOLIDAY_FILE = "holiday.txt"
 SET_TEMP_FILE = "setTemp.txt"
 STATUS_FILE = "status.txt"
 STATION_FILE = "-context.json"
-RESET_FILE = "resetReq.txt"
+COMMAND_FILE = "command.txt"
 DISPLAY_ON_FILE = "displayOn.txt"
 BOOST_FILE = "boost.txt"
 TEMPERATURE_FILE_NEW = "../monitor_home/temperature.txt"
@@ -117,6 +118,17 @@ class Temp(Structure):
     def unpack(msgBytes: bytes):
         (t, h) = unpack("<hh", msgBytes)
         return Temp(t, h)
+
+
+class LightMsg(Structure):
+    _fields_ = [
+        ("lightState", c_short),
+    ]
+
+    @staticmethod
+    def unpack(msgBytes: bytes):
+        (l,) = unpack("<h", msgBytes)
+        return LightMsg(l)
 
 
 class AdjSetTimeConstants(Structure):
