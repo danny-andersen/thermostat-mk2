@@ -118,7 +118,6 @@ fi
 diff -q ${masterstation}/2_status.txt 2_status.txt >/dev/null
 if [ $? -eq 1 ]
 then
-	# echo "Uploading changed external status"
 	cp ${masterstation}/2_status.txt 2_status.txt
 	./dropbox_uploader.sh upload 2_status.txt 2_status.txt > /dev/null 2>&1
 	# ./dropbox_uploader.sh upload 2_status.txt external_status.txt > /dev/null 2>&1
@@ -127,7 +126,6 @@ fi
 diff -q ${masterstation}/3_status.txt 3_status.txt >/dev/null
 if [ $? -eq 1 ]
 then
-	# echo "Uploading changed external status"
 	cp ${masterstation}/3_status.txt 3_status.txt
 	./dropbox_uploader.sh upload 3_status.txt 3_status.txt > /dev/null 2>&1
 fi
@@ -135,7 +133,6 @@ fi
 diff -q ${masterstation}/4_status.txt 4_status.txt >/dev/null
 if [ $? -eq 1 ]
 then
-	# echo "Uploading changed external status"
 	cp ${masterstation}/4_status.txt 4_status.txt
 	./dropbox_uploader.sh upload 4_status.txt 4_status.txt > /dev/null 2>&1
 fi
@@ -143,40 +140,52 @@ fi
 diff -q ${masterstation}/5_status.txt 5_status.txt >/dev/null
 if [ $? -eq 1 ]
 then
-	# echo "Uploading changed external status"
 	cp ${masterstation}/5_status.txt 5_status.txt
 	./dropbox_uploader.sh upload 5_status.txt 5_status.txt > /dev/null 2>&1
+fi
+
+diff -q ${masterstation}/6_status.txt 6_status.txt >/dev/null
+if [ $? -eq 1 ]
+then
+	cp ${masterstation}/6_status.txt 6_status.txt
+	./dropbox_uploader.sh upload 6_status.txt 6_status.txt > /dev/null 2>&1
 fi
 
 ./dropbox_uploader.sh download command.txt command.txt > /dev/null 2>&1
 if [ -f command.txt ]
 then
-    contents=$(cat command.txt)
-    # echo "Running command:" $contents
-    if [ $contents = "temp" ];
-    then
-        if [ -f ${sensor_dir}/temperature ]
-        then
-                #temp=$(grep "t=" $sensor_dir/w1_slave | awk '{print $10}' | awk -F= '{print $2}')
-            temp=$(cat ${sensor_dir}/temperature)
-            temp=$(echo "scale=2; $temp / 1000" | bc -l)
-            upload_temp
-        fi
-    fi
-    if [ $contents = "photo" ];
-    then
-    	touch take-photo.txt
-    fi
-    if [ $contents = "video" ];
-    then
-    	touch take-video.txt
-    fi
-    if [ $contents = "reset" ];
-    then
-    	touch $masterstation/resetReq.txt
-    fi
+    # contents=$(cat command.txt)
+    # # echo "Running command:" $contents
+    # if [ $contents = "temp" ];
+    # then
+    #     if [ -f ${sensor_dir}/temperature ]
+    #     then
+    #             #temp=$(grep "t=" $sensor_dir/w1_slave | awk '{print $10}' | awk -F= '{print $2}')
+    #         temp=$(cat ${sensor_dir}/temperature)
+    #         temp=$(echo "scale=2; $temp / 1000" | bc -l)
+    #         upload_temp
+    #     fi
+    # fi
+    # if [ $contents = "photo" ];
+    # then
+    # 	touch take-photo.txt
+    # fi
+    # if [ $contents = "video" ];
+    # then
+    # 	touch take-video.txt
+    # fi
+    # if [ $contents = "reset" ];
+    # then
+    # 	touch $masterstation/resetReq.txt
+    # fi
+    # if [ $contents = "light" ];
+    # then
+    # 	touch $masterstation/resetReq.txt
+    # fi
+    echo "Received command: "
+    cat command.txt
+    mv command.txt $masterstation
     ./dropbox_uploader.sh delete command.txt
-    rm command.txt
 fi
 
 ./dropbox_uploader.sh download setTemp.txt setTemp.txt > /dev/null 2>&1
@@ -201,10 +210,10 @@ then
 fi
 	 
 #Upload any video or photo not uploaded and delete file
-files=$(find $video_picture_dir -type f -name "*.jpeg" -printf "%f\n")
-upload_images $files
-files=$(find $video_picture_dir -type f -name "*.mp4" -printf "%f\n")
-upload_images $files
+# files=$(find $video_picture_dir -type f -name "*.jpeg" -printf "%f\n")
+# upload_images $files
+# files=$(find $video_picture_dir -type f -name "*.mp4" -printf "%f\n")
+# upload_images $files
 # files=$(find $video_picture_dir -type f -name "*.mpeg" -printf "%f\n")
 # upload_images $files
 
