@@ -87,9 +87,9 @@ def processResponseMsg(resp: requests.Response):
         msgBytes: bytes = bytes(msgArray)
         if msgId == LIGHT_COMMAND_MSG:
             chgState = light_command(msgBytes)
-        else:
-            if ctx.DEBUG:
-                print(f"Ignoring un-implemented msg {msgId}")
+        # else:
+        #     if ctx.DEBUG:
+        #         print(f"Ignoring un-implemented msg {msgId}")
         return chgState
 
 

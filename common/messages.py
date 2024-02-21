@@ -28,6 +28,7 @@ SET_HOLIDAY_MSG = 12
 SET_THERM_TEMP_MSG = 13
 RESET_MSG = 14
 LIGHT_COMMAND_MSG = 15
+BOOST_COMMAND_MSG = 16
 
 MOTD_FILE = "motd.txt"
 MOTD_EXPIRY_SECS = 3600  # an hour
@@ -129,6 +130,17 @@ class LightMsg(Structure):
     def unpack(msgBytes: bytes):
         (l,) = unpack("<h", msgBytes)
         return LightMsg(l)
+
+
+class BoostMsg(Structure):
+    _fields_ = [
+        ("boost", c_short),
+    ]
+
+    @staticmethod
+    def unpack(msgBytes: bytes):
+        (l,) = unpack("<h", msgBytes)
+        return BoostMsg(l)
 
 
 class AdjSetTimeConstants(Structure):

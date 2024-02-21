@@ -460,6 +460,19 @@ def createCommandMsg(stn):
             msgBytes = getMessageEnvelope(
                 LIGHT_COMMAND_MSG, bytearray(lightMsg), sizeof(LightMsg)
             )
+    elif "boost" in command:
+        msg = BoostMsg()
+        if "off" in command:
+            msg.boost = 0
+        elif "on" in command:
+            msg.boost = 1
+        else:
+            print(f"Invalid boost state in boost command: {command}")
+            msg = None
+        if msg:
+            msgBytes = getMessageEnvelope(
+                BOOST_COMMAND_MSG, bytearray(msg), sizeof(BoostMsg)
+            )
     if len(msgBytes) > 0:
         response = Response(response=msgBytes, mimetype="application/octet-stream")
     return response

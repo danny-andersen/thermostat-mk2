@@ -61,6 +61,50 @@ def sendMessage(ctx: StationContext):
     return chgState
 
 
+def processResponseMsg(ctx: StationContext, resp: requests.Response):
+    respContent: bytes = resp.content
+    headerBytes: bytes = respContent[0:4]
+    (msgId, mlen, crc) = Message.unpack(headerBytes)
+    msgBytes = bytearray(respContent)
+    msgBytes[2:3] = b"\x00"
+    msgBytes[3:4] = b"\x00"
+    chgState = False
+    # print(f"len: {msg.len}, msg: {msgBytes}")
+    crc_func = crcmod.predefined.mkCrcFun("crc-aug-ccitt")
+    calc_crc = crc_func(msgBytes) & 0xFFFF
+    if calc_crc != crc:
+        print(
+            f"{datetime.now()}: Failed to receive correct CRC for message: {respContent} Bytes: {msgBytes} Calc-CRC: {calc_crc:X} rx-CRC: {crc:X}"
+        )
+    else:
+        msgArray = bytearray()
+        for i in range(4, mlen):
+            msgArray.append(respContent[i])
+        msgBytes: bytes = bytes(msgArray)
+        if msgId == REQ_STATUS_MSG:
+            chgState = True
+        elif msgId == SET_TEMP_MSG:
+            chgState = newSetTempMsg(ctx, msgBytes)
+        elif msgId == SET_EXT_MSG:
+            chgState = extTempMsg(ctx, msgBytes)
+        elif msgId == SCHEDULE_MSG:
+            chgState = setScheduleMsg(ctx, msgBytes)
+        elif msgId == DELETE_ALL_SCHEDULES_MSG:
+            chgState = deleteAllSchedulesMsg(ctx)
+        elif msgId == SET_HOLIDAY_MSG:
+            chgState = setHolidayMsg(ctx, msgBytes)
+        elif msgId == SET_THERM_TEMP_MSG:
+            chgState = setCurrentTempMsg(ctx, msgBytes)
+        elif msgId == MOTD_MSG:
+            # print(f"Motd: {respContent}")
+            chgState = setMotd(ctx, msgBytes)
+        elif msgId == BOOST_COMMAND_MSG:
+            chgState = boostMsg(ctx, msgBytes)
+        else:
+            print(f"Ignoring un-implemented msg {msgId}")
+        return chgState
+
+
 def newSetTempMsg(ctx: StationContext, msgBytes: bytes):
     tempMsg = Temp.unpack(msgBytes)
     if tempMsg.temp > 100:
@@ -76,6 +120,17 @@ def newSetTempMsg(ctx: StationContext, msgBytes: bytes):
                 f"{datetime.now()}: Ignoring invalid thermostat temp {tempMsg.temp/10}C"
             )
 
+    return True
+
+
+def boostMsg(ctx: StationContext, msgBytes: bytes):
+    msg = BoostMsg.unpack(msgBytes)
+    if ctx.DEBUG:
+        print(f"{datetime.now()}: Received Boost {msg.boost}")
+    if msg.boost > 0:
+        ctx.boostTime = datetime.now().timestamp()
+    else:
+        ctx.boostTime = 0
     return True
 
 
@@ -127,10 +182,10 @@ def setCurrentTempMsg(ctx: StationContext, msgBytes: bytes):
     ctx.currentHumidity = tempMsg.humidity
     ctx.TEMP_PERIOD = int(ctx.config["timings"]["TEMP_PERIOD"])
     ctx.lastTempTime = datetime.now().timestamp()
-    if ctx.DEBUG:
-        print(
-            f"{datetime.now()}: Received current temp {ctx.currentTemp/10}C, humidity {ctx.currentHumidity/10}"
-        )
+    # if ctx.DEBUG:
+    #     print(
+    #         f"{datetime.now()}: Received current temp {ctx.currentTemp/10}C, humidity {ctx.currentHumidity/10}"
+    #     )
     return False
 
 
@@ -205,64 +260,6 @@ def readHoliday(ctx: StationContext):
     # Read file containing locally saved holiday
     hols = HolidayStr.loadFromFile(LOCAL_HOLIDAY_FILE)
     ctx.currentHoliday = Holiday(hols)
-    # if path.exists(LOCAL_HOLIDAY_FILE):
-    #     with open(LOCAL_HOLIDAY_FILE, "rb") as fp:
-    #         ctx.currentHoliday = pickle.load(fp)
-    # else:
-    #     print(f"Locally saved holiday file {LOCAL_HOLIDAY_FILE} not found ")
-
-
-# def saveHoliday(ctx: StationContext):
-#     with open(LOCAL_HOLIDAY_FILE, "wb") as fp:
-#         pickle.dump(ctx.currentHoliday, fp)
-#     fp.close()
-#     # except:
-#     #     print(f"Failed to save holiday to {LOCAL_HOLIDAY_FILE}: {sys.exc_info()[0]}")
-
-
-def processResponseMsg(ctx: StationContext, resp: requests.Response):
-    respContent: bytes = resp.content
-    headerBytes: bytes = respContent[0:4]
-    (msgId, mlen, crc) = Message.unpack(headerBytes)
-    msgBytes = bytearray(respContent)
-    msgBytes[2:3] = b"\x00"
-    msgBytes[3:4] = b"\x00"
-    chgState = False
-    # print(f"len: {msg.len}, msg: {msgBytes}")
-    crc_func = crcmod.predefined.mkCrcFun("crc-aug-ccitt")
-    calc_crc = crc_func(msgBytes) & 0xFFFF
-    if calc_crc != crc:
-        print(
-            f"{datetime.now()}: Failed to receive correct CRC for message: {respContent} Bytes: {msgBytes} Calc-CRC: {calc_crc:X} rx-CRC: {crc:X}"
-        )
-    else:
-        msgArray = bytearray()
-        for i in range(4, mlen):
-            msgArray.append(respContent[i])
-        msgBytes: bytes = bytes(msgArray)
-        if msgId == REQ_STATUS_MSG:
-            chgState = True
-        elif msgId == SET_TEMP_MSG:
-            chgState = newSetTempMsg(ctx, msgBytes)
-        elif msgId == SET_EXT_MSG:
-            chgState = extTempMsg(ctx, msgBytes)
-        elif msgId == SCHEDULE_MSG:
-            chgState = setScheduleMsg(ctx, msgBytes)
-        elif msgId == DELETE_ALL_SCHEDULES_MSG:
-            chgState = deleteAllSchedulesMsg(ctx)
-        elif msgId == SET_HOLIDAY_MSG:
-            chgState = setHolidayMsg(ctx, msgBytes)
-        elif msgId == SET_THERM_TEMP_MSG:
-            chgState = setCurrentTempMsg(ctx, msgBytes)
-        elif msgId == MOTD_MSG:
-            # print(f"Motd: {respContent}")
-            chgState = setMotd(ctx, msgBytes)
-        else:
-            print(f"Ignoring un-implemented msg {msgId}")
-        return chgState
-
-
-# void getSetPoint(SchedUnion *schedule, uint16_t mins, int currDay, bool nextSched)
 
 
 def retrieveScheduledSetTemp(
@@ -484,11 +481,11 @@ def runLoop(ctx: StationContext):
             with open(BOOST_FILE, "r", encoding="utf-8") as f:
                 try:
                     boostStr: str = f.readline()
-                    # if "ON" in boostStr:
-                    #     ctx.boostTime = nowSecs
-                    # else:
-                    #     ctx.boostTime = 0
-                    # chgState = True
+                    if "ON" in boostStr:
+                        ctx.boostTime = nowSecs
+                    else:
+                        ctx.boostTime = 0
+                    chgState = True
                     if ctx.DEBUG:
                         print(f"{nowTime}: BOOST: {boostStr} ")
                     remove(BOOST_FILE)
@@ -538,9 +535,9 @@ def runLoop(ctx: StationContext):
         #     )
         if not ctx.currentBoilerStatus and (
             (ctx.currentTemp < ctx.currentSetTemp and ctx.currentTemp != -1000)
-            or nowSecs - ctx.boostTime < ctx.BOOST_PERIOD
+            or (nowSecs - ctx.boostTime) < ctx.BOOST_PERIOD
         ):
-            # Only turn on heating if have a valid temp reading
+            # Only turn on heating if have a valid temp reading or in boost mode
             relay_on(ctx)
             ctx.currentBoilerStatus = 1
             chgState = True
@@ -548,7 +545,7 @@ def runLoop(ctx: StationContext):
                 print(f"{nowTime}: HEAT ON")
         elif ctx.currentBoilerStatus and (
             ctx.currentTemp > (ctx.currentSetTemp + ctx.HYSTERISIS)
-            and ctx.boostTime == 0
+            and (nowSecs - ctx.boostTime) >= ctx.BOOST_PERIOD
         ):
             relay_off(ctx)
             ctx.currentBoilerStatus = 0
