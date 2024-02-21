@@ -477,8 +477,8 @@ def runLoop(ctx: StationContext):
                     print(f"{nowTime}: Set Temp: Failed")
                     ctx.currentManSetTemp = -1000
         # Check for a local boost file - this is set by the GUI
-        if path.exists(BOOST_FILE):
-            with open(BOOST_FILE, "r", encoding="utf-8") as f:
+        if path.exists(COMMAND_FILE):
+            with open(COMMAND_FILE, "r", encoding="utf-8") as f:
                 try:
                     boostStr: str = f.readline()
                     if "ON" in boostStr:
@@ -488,7 +488,7 @@ def runLoop(ctx: StationContext):
                     chgState = True
                     if ctx.DEBUG:
                         print(f"{nowTime}: BOOST: {boostStr} ")
-                    remove(BOOST_FILE)
+                    remove(COMMAND_FILE)
                 except:
                     print(f"{nowTime}: Boost read: Failed")
                     ctx.currentManSetTemp = -1000
