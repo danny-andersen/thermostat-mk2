@@ -46,15 +46,15 @@
       <cutBetweenHoles>false</cutBetweenHoles>
       <orientation>VERTICAL</orientation>
       <holeSpacing value="0.1" unit="in"/>
-      <point x="4.7" y="4.0"/>
+      <point x="4.8" y="4.0"/>
     </diylc.connectivity.TraceCut>
     <diylc.connectivity.Jumper>
       <name>J9</name>
       <alpha>100</alpha>
       <points>
-        <point x="4.6" y="3.8000000000000007"/>
-        <point x="4.6" y="3.3000000000000007"/>
-        <point x="4.6" y="3.5500000000000007"/>
+        <point x="4.699999999999999" y="3.8000000000000007"/>
+        <point x="4.699999999999999" y="3.3000000000000007"/>
+        <point x="4.699999999999999" y="3.5500000000000007"/>
       </points>
       <bodyColor hex="ffffff"/>
       <borderColor hex="000000"/>
@@ -76,26 +76,15 @@
       <cutBetweenHoles>false</cutBetweenHoles>
       <orientation>VERTICAL</orientation>
       <holeSpacing value="0.1" unit="in"/>
-      <point x="4.7" y="3.8"/>
-    </diylc.connectivity.TraceCut>
-    <diylc.connectivity.TraceCut>
-      <name>Cut1</name>
-      <size value="0.08" unit="in"/>
-      <fillColor hex="ffffff"/>
-      <borderColor hex="ff0000"/>
-      <boardColor hex="f8ebb3"/>
-      <cutBetweenHoles>false</cutBetweenHoles>
-      <orientation>VERTICAL</orientation>
-      <holeSpacing value="0.1" unit="in"/>
-      <point x="4.7" y="3.9"/>
+      <point x="4.8" y="3.8"/>
     </diylc.connectivity.TraceCut>
     <diylc.connectivity.Jumper>
       <name>J1</name>
       <alpha>127</alpha>
       <points>
-        <point x="6.0" y="3.6"/>
-        <point x="6.0" y="3.9"/>
-        <point x="6.0" y="3.75"/>
+        <point x="5.5" y="3.6"/>
+        <point x="5.5" y="3.9"/>
+        <point x="5.5" y="3.75"/>
       </points>
       <bodyColor hex="ffffff"/>
       <borderColor hex="000000"/>
@@ -117,7 +106,7 @@
       <cutBetweenHoles>false</cutBetweenHoles>
       <orientation>VERTICAL</orientation>
       <holeSpacing value="0.1" unit="in"/>
-      <point x="5.2" y="3.1"/>
+      <point x="5.1" y="3.1"/>
     </diylc.connectivity.TraceCut>
     <diylc.connectivity.TraceCut>
       <name>Cut3</name>
@@ -128,7 +117,7 @@
       <cutBetweenHoles>false</cutBetweenHoles>
       <orientation>VERTICAL</orientation>
       <holeSpacing value="0.1" unit="in"/>
-      <point x="5.9" y="3.1"/>
+      <point x="5.8" y="3.1"/>
     </diylc.connectivity.TraceCut>
     <diylc.connectivity.TraceCut>
       <name>Cut4</name>
@@ -139,7 +128,7 @@
       <cutBetweenHoles>false</cutBetweenHoles>
       <orientation>VERTICAL</orientation>
       <holeSpacing value="0.1" unit="in"/>
-      <point x="5.9" y="3.3"/>
+      <point x="5.7" y="3.3"/>
     </diylc.connectivity.TraceCut>
     <diylc.connectivity.Jumper>
       <name>J2</name>
@@ -148,6 +137,25 @@
         <point x="6.1" y="3.3"/>
         <point x="6.1" y="3.6"/>
         <point x="6.1" y="3.45"/>
+      </points>
+      <bodyColor hex="ffffff"/>
+      <borderColor hex="000000"/>
+      <labelColor hex="000000"/>
+      <leadColor hex="0000ff"/>
+      <display>NAME</display>
+      <flipStanding>false</flipStanding>
+      <labelOriantation>Directional</labelOriantation>
+      <moveLabel>false</moveLabel>
+      <hideShortLeads>false</hideShortLeads>
+      <style>SOLID</style>
+    </diylc.connectivity.Jumper>
+    <diylc.connectivity.Jumper>
+      <name>J3</name>
+      <alpha>100</alpha>
+      <points>
+        <point x="5.1" y="3.4"/>
+        <point x="5.1" y="3.3"/>
+        <point x="5.1" y="3.35"/>
       </points>
       <bodyColor hex="ffffff"/>
       <borderColor hex="000000"/>
@@ -224,16 +232,16 @@
       <pinCount>_10</pinCount>
       <pinSpacing value="0.1" unit="in"/>
       <controlPoints>
-        <point x="4.4" y="3.9999999999999996"/>
-        <point x="4.4" y="3.9000000000000012"/>
-        <point x="4.4" y="3.800000000000001"/>
-        <point x="4.4" y="3.7000000000000006"/>
-        <point x="4.4" y="3.6"/>
-        <point x="4.4" y="3.4999999999999996"/>
-        <point x="4.4" y="3.4000000000000012"/>
-        <point x="4.4" y="3.300000000000001"/>
-        <point x="4.4" y="3.2000000000000006"/>
-        <point x="4.4" y="3.1"/>
+        <point x="4.5" y="4.0"/>
+        <point x="4.5" y="3.9000000000000017"/>
+        <point x="4.5" y="3.8000000000000016"/>
+        <point x="4.5" y="3.700000000000001"/>
+        <point x="4.5" y="3.6000000000000005"/>
+        <point x="4.5" y="3.5"/>
+        <point x="4.5" y="3.4000000000000017"/>
+        <point x="4.5" y="3.3000000000000016"/>
+        <point x="4.5" y="3.200000000000001"/>
+        <point x="4.5" y="3.1000000000000005"/>
       </controlPoints>
       <display>NAME</display>
       <bodyColor hex="808080"/>
@@ -243,7 +251,7 @@
     </diylc.semiconductors.SIL__IC>
     <diylc.misc.Label>
       <name>A1</name>
-      <point x="4.9" y="3.8"/>
+      <point x="5.000000000000001" y="3.8"/>
       <text>5V</text>
       <font name="Dialog.plain" size="14" style="0"/>
       <color hex="000000"/>
@@ -254,7 +262,7 @@
     </diylc.misc.Label>
     <diylc.misc.Label>
       <name>0V</name>
-      <point x="4.9" y="4.0"/>
+      <point x="5.000000000000001" y="4.0"/>
       <text>0V</text>
       <font reference="../../diylc.misc.Label/font"/>
       <color hex="000000"/>
@@ -298,7 +306,7 @@
     </diylc.misc.Label>
     <diylc.misc.Label>
       <name></name>
-      <point x="5.2" y="2.4"/>
+      <point x="5.3" y="2.4"/>
       <text>Danny Andersen</text>
       <font name="Dialog.plain" size="16" style="0"/>
       <color hex="000000"/>
@@ -339,9 +347,9 @@
       <pinCount>_3</pinCount>
       <pinSpacing value="0.1" unit="in"/>
       <controlPoints>
-        <point x="4.8" y="3.8"/>
-        <point x="4.8" y="3.9"/>
-        <point x="4.8" y="4.000000000000001"/>
+        <point x="4.9" y="3.8"/>
+        <point x="4.9" y="3.9"/>
+        <point x="4.9" y="4.000000000000001"/>
       </controlPoints>
       <display>NAME</display>
       <bodyColor hex="808080"/>
@@ -411,9 +419,9 @@
       <pinCount>_3</pinCount>
       <pinSpacing value="0.1" unit="in"/>
       <controlPoints>
-        <point x="5.0" y="3.3"/>
-        <point x="4.9" y="3.3"/>
-        <point x="4.8" y="3.3"/>
+        <point x="5.4" y="3.4"/>
+        <point x="5.3" y="3.4"/>
+        <point x="5.2" y="3.4"/>
       </controlPoints>
       <display>NAME</display>
       <bodyColor hex="808080"/>
@@ -429,9 +437,9 @@
       <pinCount>_3</pinCount>
       <pinSpacing value="0.1" unit="in"/>
       <controlPoints>
-        <point x="5.5" y="3.1"/>
         <point x="5.4" y="3.1"/>
         <point x="5.3" y="3.1"/>
+        <point x="5.2" y="3.1"/>
       </controlPoints>
       <display>NAME</display>
       <bodyColor hex="808080"/>
@@ -445,9 +453,9 @@
       <length value="5.0" unit="mm"/>
       <width value="5.0" unit="mm"/>
       <points>
-        <point x="5.8" y="3.1"/>
-        <point x="5.8" y="3.3"/>
-        <point x="5.8" y="3.2"/>
+        <point x="5.6" y="3.1"/>
+        <point x="5.6" y="3.3"/>
+        <point x="5.6" y="3.2"/>
       </points>
       <bodyColor hex="fc0a0a"/>
       <borderColor hex="b01c07"/>
@@ -466,9 +474,9 @@
       <length value="5.0" unit="mm"/>
       <width value="5.0" unit="mm"/>
       <points>
-        <point x="6.0" y="3.1"/>
-        <point x="6.0" y="3.3"/>
-        <point x="6.0" y="3.2"/>
+        <point x="5.9" y="3.1"/>
+        <point x="5.9" y="3.3"/>
+        <point x="5.9" y="3.2"/>
       </points>
       <bodyColor hex="000000"/>
       <borderColor hex="000000"/>
@@ -489,8 +497,8 @@
       <pinCount>_2</pinCount>
       <pinSpacing value="0.1" unit="in"/>
       <controlPoints>
-        <point x="6.4" y="3.1"/>
-        <point x="6.4" y="3.2"/>
+        <point x="6.3" y="3.1"/>
+        <point x="6.3" y="3.2"/>
       </controlPoints>
       <display>NAME</display>
       <bodyColor hex="808080"/>
@@ -550,7 +558,7 @@
     </diylc.misc.Label>
     <diylc.misc.Label>
       <name>L7</name>
-      <point x="6.5" y="3.1"/>
+      <point x="6.6" y="3.1"/>
       <text>GPIO27</text>
       <font name="Dialog.plain" size="14" style="0"/>
       <color hex="000000"/>
@@ -561,7 +569,7 @@
     </diylc.misc.Label>
     <diylc.misc.Label>
       <name>L8</name>
-      <point x="6.5" y="4.0"/>
+      <point x="6.6" y="4.0"/>
       <text>0V</text>
       <font name="Dialog.plain" size="14" style="0"/>
       <color hex="000000"/>
@@ -572,7 +580,7 @@
     </diylc.misc.Label>
     <diylc.misc.Label>
       <name>L9</name>
-      <point x="6.5" y="3.9"/>
+      <point x="6.6" y="3.9"/>
       <text>3V3</text>
       <font name="Dialog.plain" size="14" style="0"/>
       <color hex="000000"/>
@@ -594,7 +602,7 @@
     </diylc.misc.Label>
     <diylc.misc.Label>
       <name>L2</name>
-      <point x="5.3" y="2.5"/>
+      <point x="5.4" y="2.5"/>
       <text>To PIR Switched</text>
       <font name="Dialog.plain" size="14" style="0"/>
       <color hex="000000"/>
@@ -605,7 +613,7 @@
     </diylc.misc.Label>
     <diylc.misc.Label>
       <name>L3</name>
-      <point x="4.8" y="3.4"/>
+      <point x="5.2" y="3.5"/>
       <text>To PIR</text>
       <font name="Dialog.plain" size="14" style="0"/>
       <color hex="000000"/>
@@ -616,7 +624,7 @@
     </diylc.misc.Label>
     <diylc.misc.Label>
       <name>L4</name>
-      <point x="5.0" y="3.4"/>
+      <point x="5.4" y="3.5"/>
       <text>To Lights</text>
       <font name="Dialog.plain" size="14" style="0"/>
       <color hex="000000"/>
