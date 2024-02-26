@@ -529,6 +529,18 @@ def runLoop(ctx: StationContext):
         if saveTemp != ctx.currentSetTemp:
             chgState = True
 
+        # Fail safe if set temp is way too high
+        if ctx.currentSetTemp > 250:
+            print(
+                f"Current set temp set too high ({ctx.currentSetTemp} - setting to default {ctx.DEFAULT_TEMP}"
+            )
+            ctx.currentSetTemp = ctx.DEFAULT_TEMP
+        if ctx.currentSetTemp < ctx.DEFAULT_TEMP:
+            print(
+                f"Current set temp set too low ({ctx.currentSetTemp} - setting to default {ctx.DEFAULT_TEMP}"
+            )
+            ctx.currentSetTemp = ctx.DEFAULT_TEMP
+
         # if ctx.DEBUG:
         #     print(
         #         f"{nowTime}: Calculated Set temp: {ctx.currentSetTemp} Sched temp: {schedSetTemp} Holiday temp: {holidayTemp} Current Temp: {ctx.currentTemp}\n"
