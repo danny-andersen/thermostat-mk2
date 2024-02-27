@@ -27,6 +27,7 @@ from common.messages import *
 # &st=<set temp>
 # &r=< mins to set temp, 0 off>
 # &p=<1 sensor triggered, 0 sensor off>
+# &nt=<next temp and time str>
 def sendMessage(ctx: StationContext):
     url_parts = [f"{ctx.controlstation_url}/message?s={ctx.stationNo}"]
     if ctx.reset:
@@ -39,6 +40,7 @@ def sendMessage(ctx: StationContext):
     url_parts.append(f"&h={int(ctx.currentHumidity)}")
     url_parts.append(f"&st={int(ctx.currentSetTemp)}")
     url_parts.append(f"&r={int(ctx.currentBoilerStatus)}")
+    url_parts.append(f"&nt={ctx.nextSetTemp}")
     url_parts.append(f"&u={0}")
     url = "".join(url_parts)
     chgState = False
@@ -510,8 +512,13 @@ def runLoop(ctx: StationContext):
             ctx.currentManSetTemp = -1000
             ctx.setTempTime = nowSecs
             chgState = True
+
         schedSetTemp = retrieveScheduledSetTemp(ctx, nowTime).temp
-        ctx.nextSetTemp = retrieveScheduledSetTemp(ctx, nowTime, True)
+        nextSet = retrieveScheduledSetTemp(ctx, nowTime, True)
+        hours = int(nextSet.start / 60)
+        mins = nextSet.start - (hours * 60)
+        ctx.nextSetTemp = f"{nextSet.temp/10:0.1f}@{hours:02d}:{mins:02d}"
+
         holidayTemp = checkOnHoliday(ctx, nowSecs)
         # We have three set temperatures:
         # currentManSetTemp is one that has been set onscreen or sent remotely

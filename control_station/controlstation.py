@@ -263,6 +263,11 @@ def getMessage():
     therm = args.get("st", type=float)
     if therm:
         sc.currentSetTemp = therm
+    nextTemp = args.get("nt", type=str)
+    if nextTemp:
+        sc.nextSetTemp = nextTemp
+    if therm:
+        sc.currentSetTemp = therm
     heat = args.get("r", type=int, default=0)
     if heat or (heat == 0 and sc.currentBoilerStatus > 0):
         sc.currentBoilerStatus = heat

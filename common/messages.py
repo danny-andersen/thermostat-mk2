@@ -499,7 +499,7 @@ class StationContext:
     video_dir = ""
     CHECK_WIFI_SCRIPT = ""
     camera_motion = False
-    nextSetTemp: ScheduleElement = None
+    nextSetTemp: str = None
 
     # Constants overriden by .ini file
     RELAY_OUT = 27
@@ -649,10 +649,8 @@ class StationContext:
                 statusf.write(f"Current humidity: {self.currentHumidity/10:0.1f}\n")
                 statusf.write(f"Current set temp: {self.currentSetTemp/10:0.1f}\n")
                 if self.nextSetTemp:
-                    hours = int(self.nextSetTemp.start / 60)
-                    mins = self.nextSetTemp.start - (hours * 60)
                     statusf.write(
-                        f"Next set temp: {self.nextSetTemp.temp/10:0.1f}@{hours:02d}:{mins:02d}\n"
+                        f"Next set temp: {self.nextSetTemp}\n"
                     )
                 heatOn = "No" if self.currentBoilerStatus == 0 else "Yes"
                 statusf.write(f"Heat on? {heatOn}\n")
