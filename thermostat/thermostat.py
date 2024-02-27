@@ -256,7 +256,7 @@ def setHolidayMsg(ctx: StationContext, msgBytes: bytes):
     return True
 
 
-def readHoliday(ctx: StationContext):
+def readHoliday(ctx: StationContext) -> ScheduleElement:
     # Read file containing locally saved holiday
     hols = HolidayStr.loadFromFile(LOCAL_HOLIDAY_FILE)
     ctx.currentHoliday = Holiday(hols)
@@ -314,7 +314,7 @@ def retrieveScheduledSetTemp(
                 priority = 3
                 next_mins = sched.start
                 retSched = sched
-    return retSched.temp
+    return retSched
 
 
 def checkOnHoliday(ctx: StationContext, secs: float):
@@ -510,7 +510,8 @@ def runLoop(ctx: StationContext):
             ctx.currentManSetTemp = -1000
             ctx.setTempTime = nowSecs
             chgState = True
-        schedSetTemp = retrieveScheduledSetTemp(ctx, nowTime)
+        schedSetTemp = retrieveScheduledSetTemp(ctx, nowTime).temp
+        ctx.nextSetTemp = retrieveScheduledSetTemp(ctx, nowTime, True)
         holidayTemp = checkOnHoliday(ctx, nowSecs)
         # We have three set temperatures:
         # currentManSetTemp is one that has been set onscreen or sent remotely
