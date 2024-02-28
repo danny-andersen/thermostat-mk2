@@ -270,10 +270,10 @@ def retrieveScheduledSetTemp(
     priority = 0
     next_mins = 1440
     retSched: ScheduleElement = ScheduleElement()
+    minOfDay = (nowTime.hour * 60) + nowTime.minute
     curr_day = (
         nowTime.weekday() + 1
-    )  # Python is 0-6 but the original 'C' code it was 1 - 7
-    minOfDay = (nowTime.hour * 60) + nowTime.minute
+    )  # Python is 0-6 but in the original 'C' code it was 1 - 7
     # Note: = "0" for every day,
     # "0x0100" for Weekday (Mon - Fri),
     # "0x0200" for Weekend (Sat, Sun),
@@ -316,6 +316,36 @@ def retrieveScheduledSetTemp(
                 priority = 3
                 next_mins = sched.start
                 retSched = sched
+    if wantNext and retSched.temp == -1000:
+        # Gone past the last schedule - go to next day and find the first
+        minOfDay = 0  # Midnight
+        curr_day = (curr_day + 1) if curr_day < 7 else 0  # Next day
+        for sched in ctx.schedules:
+            if sched.start > minOfDay and sched.start < next_mins:
+                if sched.day == 0 and priority <= 1:
+                    priority = 1
+                    next_mins = sched.start
+                    retSched = sched
+                if (
+                    sched.day == 0x200
+                    and (curr_day == 6 or curr_day == 7)
+                    and priority <= 2
+                ):
+                    priority = 2
+                    next_mins = sched.start
+                    retSched = sched
+                if (
+                    sched.day == 0x100
+                    and (curr_day >= 1 and curr_day <= 5)
+                    and priority <= 2
+                ):
+                    priority = 2
+                    next_mins = sched.start
+                    retSched = sched
+                if sched.day == curr_day and priority <= 3:
+                    priority = 3
+                    next_mins = sched.start
+                    retSched = sched
     return retSched
 
 
@@ -444,16 +474,9 @@ def displayOff(ctx: StationContext):
 
 def runLoop(ctx: StationContext):
     # This function never returns unless there is an uncaught exception
-    # # Use GPIO numbering, not pin numbering
-    # GPIO.setmode(GPIO.BCM)
-    # GPIO.setup(context.RELAY_OUT, GPIO.OUT)  # Relay output
-    # GPIO.setup(context.PIR_IN, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # PIR input
-    # # GPIO.setup(context.TEMP_SENSOR, GPIO.IN, pull_up_down=GPIO.PUD_UP)  # DHT22
-    # GPIO.setup(context.GREEN_LED, GPIO.OUT)  # Green LED lit when boiler on
-    # GPIO.setup(context.RED_LED, GPIO.OUT)  # RED LED lit when boiler off
-    # setLED(context, LedColour.AMBER)
-    # relay_off(context)
-
+    lastMin: int = -1
+    schedSetTemp: float = -1000
+    newSetTemp: ScheduleElement = ScheduleElement()
     while True:
         nowTime = datetime.now()
         nowSecs = nowTime.timestamp()
@@ -497,8 +520,6 @@ def runLoop(ctx: StationContext):
         if (nowSecs - ctx.lastTempTime) > ctx.TEMP_PERIOD:
             # Not received a temp update from control for more than a set period - read local
             ctx.lastTempTime = nowSecs
-            # While not getting temp from control station, read locally more regularly
-            ctx.TEMP_PERIOD = ctx.GET_MSG_PERIOD
             (ctx.currentTemp, ctx.currentHumidity) = readSHTC3Temp()
             ctx.currentTemp *= 10
             ctx.currentHumidity *= 10
@@ -513,11 +534,14 @@ def runLoop(ctx: StationContext):
             ctx.setTempTime = nowSecs
             chgState = True
 
-        schedSetTemp = retrieveScheduledSetTemp(ctx, nowTime).temp
-        nextSet = retrieveScheduledSetTemp(ctx, nowTime, True)
-        hours = int(nextSet.start / 60)
-        mins = nextSet.start - (hours * 60)
-        ctx.nextSetTemp = f"{nextSet.temp/10:0.1f}@{hours:02d}:{mins:02d}"
+        if lastMin != nowTime.minute:
+            # Check for schedule change every minute
+            schedSetTemp = retrieveScheduledSetTemp(ctx, nowTime).temp
+            nextSet = retrieveScheduledSetTemp(ctx, nowTime, True)
+            hours = int(nextSet.start / 60)
+            mins = nextSet.start - (hours * 60)
+            ctx.nextSetTemp = f"{nextSet.temp/10:0.1f}@{hours:02d}:{mins:02d}"
+            lastMin = nowTime.minute
 
         holidayTemp = checkOnHoliday(ctx, nowSecs)
         # We have three set temperatures:
