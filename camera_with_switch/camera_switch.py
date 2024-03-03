@@ -124,7 +124,6 @@ def button_pressed():
         if ctx.DEBUG:
             print(f"{nowTime}: Debounce: Delta {deltaPressed}")
         return
-    lastTimePressed = nowTime
     if ctx.DEBUG:
         print(f"{nowTime}: BUTTON pressed: Delta {deltaPressed}")
     if pir_state(nowTime) or button_state(nowTime):
@@ -264,10 +263,10 @@ if __name__ == "__main__":
 
     ctx.reset = 1
 
-    ctx.pir = LightSensor(ctx.PIR_IN)
+    ctx.pir = LightSensor(ctx.PIR_IN, charge_time_limit=0.02)
     ctx.pir.when_light = pir_triggered
     ctx.switch = Button(pin=ctx.SWITCH_IN, pull_up=True)
-    # ctx.switch.when_pressed = button_pressed
+    ctx.switch.when_pressed = button_pressed
 
     ctx.relay = OutputDevice(ctx.RELAY_OUT, active_high=True, initial_value=False)
 
