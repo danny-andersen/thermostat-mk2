@@ -265,8 +265,8 @@ if __name__ == "__main__":
 
     ctx.pir = LightSensor(ctx.PIR_IN, charge_time_limit=0.02)
     ctx.pir.when_light = pir_triggered
-    ctx.switch = Button(pin=ctx.SWITCH_IN, pull_up=True)
-    ctx.switch.when_pressed = button_pressed
+    ctx.switch = Button(pin=ctx.SWITCH_IN, pull_up=True, hold_time=0.1)
+    ctx.switch.when_held = button_pressed
 
     ctx.relay = OutputDevice(ctx.RELAY_OUT, active_high=True, initial_value=False)
 
