@@ -8,6 +8,8 @@ ERROR_MESSAGE="drmModeAtomicCommit: No space left on device"
 check_error() {
     if journalctl -u "$SERVICE_NAME" -n 5 | grep -q "$ERROR_MESSAGE"; then
         return 0  # Error found
+    elif dmesg | grep -q "Resetting GPU"; then
+        return 0
     else
         return 1  # Error not found
     fi
