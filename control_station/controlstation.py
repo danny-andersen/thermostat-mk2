@@ -117,16 +117,23 @@ def runMonitorScript():
     history: tuple[dict[int, float], dict[int, float]] = (dict(), dict())
     # Wait until server up and running
     while True:
-        nowTime = datetime.now().timestamp()
-        if (nowTime - lastTempTime) > TEMP_PERIOD:
-            # Read temp and humidity and update latest files
-            lastTempTime = nowTime
-            getTemp(history)
-        nowTime = datetime.now().timestamp()
-        if (nowTime - lastMonitorTime) > MONITOR_PERIOD:
-            # Run the monitor script
-            lastMonitorTime = nowTime
-            runScript()
+        try:
+            nowTime = datetime.now().timestamp()
+            if (nowTime - lastTempTime) > TEMP_PERIOD:
+                # Read temp and humidity and update latest files
+                lastTempTime = nowTime
+                getTemp(history)
+            nowTime = datetime.now().timestamp()
+            if (nowTime - lastMonitorTime) > MONITOR_PERIOD:
+                # Run the monitor script
+                lastMonitorTime = nowTime
+                runScript()
+        except OSError as oer:
+            print("***> Got an OSError in monitoring script: {oer}, sleeping for 5")
+            sleep(5)
+        except Exception as exc:
+            print("***> Got an Exception in monitoring script: {exc}, sleeping for 5")
+            sleep(5)
         sleep(1)
 
 
