@@ -34,8 +34,8 @@ then
 fi
 
 #Check last time could contact wifi AP 
-#If greater than 15 mins ago, restart wlan0
-cnt=$(find ./ -name wifi-up.txt -mmin +15 | wc -l)
+#If greater than 30 mins ago, restart wlan0
+cnt=$(find ./ -name wifi-up.txt -mmin +30 | wc -l)
 if [ ${cnt} != 0 ]
 then
       sudo /sbin/ifdown --force wlan0
@@ -51,9 +51,9 @@ then
       fi
 fi
 
-#Catch all - If greater than 60 mins ago, reboot
-#Note that this will cause a reboot every hour if AP is down
-cnt=$(find ./ -name wifi-up.txt -mmin +60 | wc -l)
+#Catch all - If greater than 120 mins ago, reboot
+#Note that this will cause a reboot every 2 hours if AP is down
+cnt=$(find ./ -name wifi-up.txt -mmin +120 | wc -l)
 if [ ${cnt} != 0 ]
 then
       sudo /sbin/shutdown -r now
