@@ -11,7 +11,7 @@ import fnmatch
 # import RPi.GPIO as GPIO
 # import board
 # import digitalio
-from gpiozero import LightSensor, OutputDevice, Button
+from gpiozero import LightSensor, OutputDevice, Button, InputDevice
 
 # import sys
 # sys.path.insert(0, "../common")
@@ -154,12 +154,34 @@ def relay_on():
     ctx.relay.on()
 
 
-def pir_triggered():
-    nowTime = datetime.now()
-    if ctx.DEBUG:
-        print(f"{nowTime}: PIR Triggered")
-    ctx.lastPirTime = nowTime.timestamp()
-    checkLightSwitch(nowTime)
+# def pir_triggered():
+#     nowTime = datetime.now()
+#     if ctx.DEBUG:
+#         print(f"{nowTime}: PIR Triggered")
+#     ctx.lastPirTime = nowTime.timestamp()
+#     checkLightSwitch(nowTime)
+
+
+def checkIfPirTriggered(nowTime: datetime):
+    # Check every 2 seconds
+    if nowTime.second % 2 == 0:
+        # Set to output device
+        ctx.pir = OutputDevice(pin=ctx.PIR_IN, active_high=True, initial_value=False)
+        # Drive output low to discharge the capacitor
+        sleep(0.1)
+        # Set to input device
+        ctx.pir.close()
+        ctx.pir = InputDevice(pin=ctx.PIR_IN, pull_up=None, active_state=True)
+        # Count how long it takes for the input pin to recharge
+        # For dark - about 0.7 seconds, for light, about 0.04s
+        for i in range(1, 10):
+            if ctx.pir.is_active:
+                ctx.lastPirTime = nowTime.timestamp()
+                if ctx.DEBUG:
+                    print(f"{nowTime}: PIR Triggered at count {i}")
+                break
+            sleep(0.01)
+        ctx.pir.close()
 
 
 def checkLightSwitch(nowTime: datetime):
@@ -242,6 +264,7 @@ def runLoop():
         nowSecs = nowTime.timestamp()
 
         # Turn light on if button pressed or pir triggers
+        checkIfPirTriggered(nowTime)
         checkLightSwitch(nowTime)
         motion_state = checkForMotionEvents()
         if motion_state != ctx.camera_motion:
@@ -263,8 +286,8 @@ if __name__ == "__main__":
 
     ctx.reset = 1
 
-    ctx.pir = LightSensor(ctx.PIR_IN, charge_time_limit=0.02)
-    ctx.pir.when_light = pir_triggered
+    # ctx.pir = LightSensor(ctx.PIR_IN, charge_time_limit=0.02)
+    # ctx.pir.when_light = pir_triggered
     ctx.switch = Button(pin=ctx.SWITCH_IN, pull_up=True, hold_time=0.1)
     ctx.switch.when_held = button_pressed
 
