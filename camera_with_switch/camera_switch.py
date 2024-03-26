@@ -88,7 +88,7 @@ def processResponseMsg(resp: requests.Response):
             msgArray.append(respContent[i])
         msgBytes: bytes = bytes(msgArray)
         if msgId == LIGHT_COMMAND_MSG:
-            chgState = light_command(msgBytes)
+            chg = light_command(msgBytes)
         # else:
         #     if ctx.DEBUG:
         #         print(f"Ignoring un-implemented msg {msgId}")
@@ -194,7 +194,7 @@ def checkForMotionEvents():
     return motion_detected
 
 
-def runScript(nowTime: datetime):
+def runScript():
     cmd = f"{ctx.CHECK_WIFI_SCRIPT} {ctx.stationNo} {ctx.video_dir}"
     # if ctx.DEBUG:
     #     print(f"{nowTime}: Calling check script {cmd}\n")
@@ -231,7 +231,7 @@ def runMonitorScript():
         if (nowTime - lastMonitorTime) > ctx.MONITOR_PERIOD:
             # Run the monitor script
             lastMonitorTime = nowTime
-            runScript(nowTime)
+            runScript()
         sleep(5)
 
 

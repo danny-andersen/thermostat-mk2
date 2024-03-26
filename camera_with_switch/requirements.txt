@@ -1,6 +1,8 @@
 RPi.GPIO
 pigpio
-gpiozero
+#Use system installed versions of lgpio and gpiozero: EDIT pyvenc.cfg and set include-system-site-packages = true
+#lgpio
+#gpiozero
 requests
 crcmod
 jsonpickle
