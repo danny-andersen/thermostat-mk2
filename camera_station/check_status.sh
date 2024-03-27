@@ -23,7 +23,7 @@ device_change_file=$(date +%Y%m%d)"_cam${1}_change.txt"
 video_picture_dir=$2
 uploadStatus=N
 COMMAND_FILE=command-cam${1}.txt
-only_monitor_when_noones_home=Y
+only_monitor_when_noones_home=N
 
 # echo Running check status with ${1} and $2
 #Check wifi up
@@ -32,12 +32,22 @@ if [ $? == 0 ]
 then
   touch wifi-up.txt
 fi
-
-#Check last time could contact wifi AP 
-#If greater than 30 mins ago, restart wlan0
-cnt=$(find ./ -name wifi-up.txt -mmin +30 | wc -l)
-if [ ${cnt} != 0 ]
+#Find out whether rebooted less than a day and if so how many hours ago
+uphours=24
+uptime | grep -qv day
+if [ $? == 0 ]
 then
+    #Uptime less than a day - if we rebooted less than an hour ago, dont reboot again
+    uphours=$(uptime | awk '{print $3}' | awk -F: '{print $1}')
+fi
+#Check last time could contact wifi AP 
+#If greater than 30 mins ago and not rebooted for over an hour, restart wlan0
+cnt=$(find ./ -name wifi-up.txt -mmin +30 | wc -l)
+if [ $cnt != 0 ] && [ $uphours != 0 ]
+then
+      #No response from ping to router and we havent rebooted for over an hour
+      echo No response from ping to router for more than 30 mins and reboot was $uphours ago - toggling wlan0 interface
+      #So toggle the wifi interface first
       sudo /sbin/ifdown --force wlan0
       sleep 10
       sudo /sbin/ifup --force wlan0
@@ -46,13 +56,13 @@ then
       ifquery --state wlan0
       if [ $? == 1 ]
       then
-	  #Failed to restart interface so reboot
+    	  #Failed to restart interface so reboot
           sudo /sbin/shutdown -r now
       fi
 fi
 
-#Catch all - If greater than 120 mins ago, reboot
-#Note that this will cause a reboot every 2 hours if AP is down
+#Catch all - If last contact was greater than 120 mins ago, reboot
+#Note that this will cause a reboot every 2 hours if AP is down or a problem with the interface
 cnt=$(find ./ -name wifi-up.txt -mmin +120 | wc -l)
 if [ ${cnt} != 0 ]
 then
