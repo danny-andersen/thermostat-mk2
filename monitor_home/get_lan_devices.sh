@@ -34,7 +34,7 @@ fi
 
 #Find out whether rebooted less than a day and if so how many hours ago
 uphours=24
-uptime | grep -v day
+uptime | grep -qv day
 if [ $? == 0 ]
 then
     #Uptime less than a day - if we rebooted less than an hour ago, dont reboot again

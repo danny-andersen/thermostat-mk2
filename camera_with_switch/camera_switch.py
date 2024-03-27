@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
 from time import sleep
 import requests
-from multiprocessing import Process
-import atexit
+
+# from multiprocessing import Process
+# import atexit
+from threading import Thread
 import subprocess
 
 from os import listdir
@@ -22,7 +24,7 @@ import crcmod.predefined
 
 # Use a global as switch callback needs it
 ctx: StationContext = None
-monitorScriptProcess: Process
+monitorScriptProcess: Thread
 lastTimePressed: datetime
 chgState = False
 
@@ -108,7 +110,7 @@ def light_command(msgBytes: bytes):
         if ctx.DEBUG:
             print(f"{nowTime}: Lights ON command rx")
         ctx.button_start_time = datetime.now().timestamp()
-    checkLightSwitch(nowTime)
+    driveLight(nowTime)
     return False
 
 
@@ -137,7 +139,7 @@ def button_pressed():
         if ctx.DEBUG:
             print(f"{nowTime}: Turning lights on")
         ctx.button_start_time = nowTime.timestamp()
-    checkLightSwitch(nowTime)
+    driveLight(nowTime)
 
 
 def relay_off():
@@ -163,28 +165,26 @@ def relay_on():
 
 
 def checkIfPirTriggered(nowTime: datetime):
-    # Check every 2 seconds
-    if nowTime.second % 2 == 0:
-        # Set to output device
-        ctx.pir = OutputDevice(pin=ctx.PIR_IN, active_high=True, initial_value=False)
-        # Drive output low to discharge the capacitor
-        sleep(0.1)
-        # Set to input device
-        ctx.pir.close()
-        ctx.pir = InputDevice(pin=ctx.PIR_IN, pull_up=None, active_state=True)
-        # Count how long it takes for the input pin to recharge
-        # For dark - about 0.7 seconds, for light, about 0.04s
-        for i in range(1, 10):
-            if ctx.pir.is_active:
-                ctx.lastPirTime = nowTime.timestamp()
-                if ctx.DEBUG:
-                    print(f"{nowTime}: PIR Triggered at count {i}")
-                break
-            sleep(0.01)
-        ctx.pir.close()
+    # Set to output device
+    ctx.pir = OutputDevice(pin=ctx.PIR_IN, active_high=True, initial_value=False)
+    # Drive output low to discharge the capacitor
+    sleep(0.1)
+    # Set to input device
+    ctx.pir.close()
+    ctx.pir = InputDevice(pin=ctx.PIR_IN, pull_up=None, active_state=True)
+    # Count how long it takes for the input pin to recharge
+    # For dark - about 0.7 seconds, for light, about 0.04s
+    for i in range(1, 10):
+        if ctx.pir.is_active:
+            ctx.lastPirTime = nowTime.timestamp()
+            if ctx.DEBUG:
+                print(f"{nowTime}: PIR Triggered at count {i}")
+            break
+        sleep(0.01)
+    ctx.pir.close()
 
 
-def checkLightSwitch(nowTime: datetime):
+def driveLight(nowTime: datetime):
     global chgState
     new_button_state = button_state(nowTime)
     new_pir_stat = pir_state(nowTime)
@@ -228,6 +228,7 @@ def button_state(nowTime: datetime):
 
 
 def pir_state(nowTime: datetime):
+    # Returns true if PIR triggered less than trigger period ago
     return (nowTime.timestamp() - ctx.lastPirTime) < ctx.PIR_TRIGGER_PERIOD
 
 
@@ -263,9 +264,12 @@ def runLoop():
         nowTime = datetime.now()
         nowSecs = nowTime.timestamp()
 
-        # Turn light on if button pressed or pir triggers
-        checkIfPirTriggered(nowTime)
-        checkLightSwitch(nowTime)
+        # Check if pir triggered and not already triggered
+        if not pir_state(nowTime):
+            checkIfPirTriggered(nowTime)
+        # Toggle light if button pressed or turn light on if PIR triggered or time expired
+        driveLight(nowTime)
+        # Check to see if any motion videos are being captured to inform controlstation
         motion_state = checkForMotionEvents()
         if motion_state != ctx.camera_motion:
             chgState = True
@@ -273,7 +277,6 @@ def runLoop():
         if chgState or ((nowSecs - ctx.lastMessageTime) > ctx.GET_MSG_PERIOD):
             chgState = sendMessage()
             ctx.lastMessageTime = nowSecs
-
         sleep(0.5)
 
 
@@ -295,9 +298,10 @@ if __name__ == "__main__":
 
     sleep(1)
 
-    monitorScriptProcess = Process(target=runMonitorScript, daemon=True)
+    # monitorScriptProcess = Process(target=runMonitorScript, daemon=True)
+    monitorScriptProcess = Thread(target=runMonitorScript)
     monitorScriptProcess.start()
-    atexit.register(stopMonitoring)
+    # atexit.register(stopMonitoring)
 
     if ctx.DEBUG:
         print("Setup complete")
