@@ -164,38 +164,14 @@ fi
 ./dropbox_uploader.sh download command.txt command.txt > /dev/null 2>&1
 if [ -f command.txt ]
 then
-    # contents=$(cat command.txt)
-    # # echo "Running command:" $contents
-    # if [ $contents = "temp" ];
-    # then
-    #     if [ -f ${sensor_dir}/temperature ]
-    #     then
-    #             #temp=$(grep "t=" $sensor_dir/w1_slave | awk '{print $10}' | awk -F= '{print $2}')
-    #         temp=$(cat ${sensor_dir}/temperature)
-    #         temp=$(echo "scale=2; $temp / 1000" | bc -l)
-    #         upload_temp
-    #     fi
-    # fi
-    # if [ $contents = "photo" ];
-    # then
-    # 	touch take-photo.txt
-    # fi
-    # if [ $contents = "video" ];
-    # then
-    # 	touch take-video.txt
-    # fi
-    # if [ $contents = "reset" ];
-    # then
-    # 	touch $masterstation/resetReq.txt
-    # fi
-    # if [ $contents = "light" ];
-    # then
-    # 	touch $masterstation/resetReq.txt
-    # fi
-    echo "Received command: "
-    cat command.txt
-    mv command.txt $masterstation
+    contents=$(cat command.txt)
     ./dropbox_uploader.sh delete command.txt
+    rm command.txt
+    echo "Received command: $contents"
+    if [ $contents = "reset" ];
+    then
+    	sudo reboot
+    fi
 fi
 
 ./dropbox_uploader.sh download setTemp.txt setTemp.txt > /dev/null 2>&1
