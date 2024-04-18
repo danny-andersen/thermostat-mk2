@@ -31,11 +31,13 @@ only_monitor_when_noones_home='N'
 COMMAND_FILE=command-cam${CAM_NUM}.txt
 
 # echo "Downloading command file"
-./dropbox_uploader.sh download COMMAND_FILE command.txt > /dev/null 2>&1
+./dropbox_uploader.sh download $COMMAND_FILE command.txt > /dev/null 2>&1
 if [ -f command.txt ]
 then
     contents=$(cat command.txt)
     # echo "Running command:" $contents
+    ./dropbox_uploader.sh delete $COMMAND_FILE
+    rm command.txt
     if [ $contents = "photo" ];
     then
     	touch take-photo.txt
@@ -46,10 +48,8 @@ then
     fi
     if [ $contents = "reset" ];
     then
-    	touch resetReq.txt
+        sudo reboot
     fi
-    ./dropbox_uploader.sh delete COMMAND_FILE
-    rm command.txt
 fi
 
 
