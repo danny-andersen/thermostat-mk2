@@ -28,58 +28,53 @@ function check_camera_working {
     fi
 }
 
+function turn_camera_on_off () {
+    #Check if motion is running
+    state=$1
+    #echo "Checking camera running - state is" $state
+    sudo systemctl is-active --quiet motion
+    if [ $? -ne 0 ]
+    then
+        if [ $state = "Y" ]
+        then
+            #Motion isnt running
+            echo "Motion isnt running and camera should be on"
+            sudo service motion start
+        fi
+    else
+        if [ $state = "N" ]
+        then
+            #Motion is running but should be off
+            echo "Stopping motion service"
+            sudo service motion stop
+        fi
+    fi
+    if [ $state = "Y" ]
+    then
+        check_camera_working
+    fi
+}
+
 #Start
 only_monitor_when_noones_home=$1
+camera_on=$2
 
 #Check whether we should enable cameras
-#For internal cameras only enable when no-one's home
+#For internal cameras only turn off when someones home
 if [ $only_monitor_when_noones_home = 'Y' ]
 then
     #Check if anyone's home
     safeDevice=`cat safeDevices.txt`
     dev=$(echo $safeDevice | sed 's/|/ /g')
-    home_alone="Y"
     for d in $dev
     do
         ping -c2 $d > /dev/null 2>&1
         if [ $? == 0 ]
         then
             #Device on network
-            home_alone="N"
+            camera_on="N"
         fi
     done
-    #Check if motion is running
-    sudo service motion status >/dev/null
-    if [ $? -ne 0 ]
-    then
-        if [ $home_alone = "Y" ]
-        then
-            #Motion isnt running
-            echo "No ones home and motion isnt running"
-            sudo service motion start
-        fi
-    else
-        if [ $home_alone = "N" ]
-        then
-            #Motion is running but someones home
-            echo "Stopping motion service"
-            sudo service motion stop
-        fi
-    fi
-    if [ $home_alone = "Y" ]
-    then
-        check_camera_working
-    fi
-else
-    #Check camera hasnt failed
-    check_camera_working
-    #Check if motion is running
-    sudo service motion status >/dev/null
-    if [ $? -ne 0 ]
-    then
-        #Motion isnt running
-        echo "Motion service isnt running ??"
-        sudo service motion start
-    fi
 fi
+turn_camera_on_off $camera_on
 

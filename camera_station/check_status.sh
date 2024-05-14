@@ -24,10 +24,6 @@ CAM_NUM=$1
 video_picture_dir=$2
 only_monitor_when_noones_home='N'
 
-./check_wifi.sh
-./check_camera.sh $only_monitor_when_noones_home
-./check_temp.sh $CAM_NUM
-
 COMMAND_FILE=command-cam${CAM_NUM}.txt
 
 # echo "Downloading command file"
@@ -46,11 +42,33 @@ then
     then
     	touch take-video.txt
     fi
+    if [ $contents = "camera-on" ];
+    then
+        echo "Received camera ON command"
+        echo "Y" > camera_status.txt
+    fi
+    if [ $contents = "camera-off" ];
+    then
+        echo "Received camera OFF command"
+        echo "N" > camera_status.txt
+    fi
     if [ $contents = "reset" ];
     then
         sudo reboot
     fi
 fi
+
+if [ -f camera_status.txt ]
+then
+    camera_on=$(cat camera_status.txt)
+else
+    camera_on="Y"
+    echo "Y" > camera_status.txt
+fi
+
+./check_wifi.sh
+./check_camera.sh $only_monitor_when_noones_home $camera_on
+./check_temp.sh $CAM_NUM
 
 
 # echo "Looking for media files and uploading"

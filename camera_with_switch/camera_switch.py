@@ -7,7 +7,7 @@ import requests
 from threading import Thread
 import subprocess
 
-from os import listdir
+from os import listdir, path
 import fnmatch
 
 # import RPi.GPIO as GPIO
@@ -36,8 +36,9 @@ chgState = False
 # &t=<thermostat temp>
 # &h=<humidity>
 # &st=<set temp>
-# &r=< mins to set temp, 1 on or 0 off>
-# &p=<1 sensor triggered, 0 sensor off>
+# &r=< mins to set temp, or 1 relay on or 0 relay off>
+# &p=<1 sensor or motion triggered, 0 not triggered, -1 pir is disabled>
+# &c=<0 if camera off, 1 if on>
 def sendMessage():
     url_parts = [f"{ctx.controlstation_url}/message?s={ctx.stationNo}"]
     if ctx.reset:
@@ -48,6 +49,7 @@ def sendMessage():
     url_parts.append(f"&p={int(ctx.pir_stat or ctx.camera_motion)}")
     # url_parts.append("&u=1")
     url_parts.append(f"&r={int(ctx.relay_on)}")
+    url_parts.append(f"&c={int(ctx.camera_state)}")
     url = "".join(url_parts)
     chg = False
     # Send HTTP request with a 3 sec timeout
@@ -267,6 +269,12 @@ def runLoop():
         # Check if pir triggered and not already triggered
         if not pir_state(nowTime):
             checkIfPirTriggered(nowTime)
+        # Check if camera has been turned off by remote command
+        if path.exists(ctx.CAMERA_STATUS_FILE):
+            with open(ctx.CAMERA_STATUS_FILE, "r", encoding="utf-8") as fp:
+                status = fp.read()
+                ctx.camera_state = 0 if "N" in status else 1
+                # print(f"Read camera status: {status}, set state {ctx.camera_state}")
         # Toggle light if button pressed or turn light on if PIR triggered or time expired
         driveLight(nowTime)
         # Check to see if any motion videos are being captured to inform controlstation

@@ -261,6 +261,7 @@ def getMessage():
         sc.currentHumidity = -1000
         sc.motdExpiry = MOTD_EXPIRY_SECS
         sc.scheduleMsgs = []
+        sc.camera_state = 1  # Assume on
     temp = args.get("t", type=float)
     if temp:
         sc.currentTemp = temp
@@ -283,6 +284,7 @@ def getMessage():
         sc.displayOn = pir
     if pir:
         sc.lastPirTime = datetime.now().timestamp()
+    sc.camera_state = args.get("c", type=int, default=1)
     updateOnly = args.get("u", type=int, default=0)
     if updateOnly:
         response: Response = getNoMessage()

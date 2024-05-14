@@ -485,7 +485,8 @@ class StationContext:
     lastPirTime = 0
     boostTime = 0
     button_start_time = 0
-    pir_stat = 0
+    pir_stat = 0  # 0 is not triggered, 1 = triggered, -1 = disabled
+    camera_state = 1  # 1 is motion is on and running, 0 motion service (camera) is off
     currentSentThermTemp = 1000.0
     manHolidayTemp = 1000.0
     lastScheduledTemp = 1000.0
@@ -544,8 +545,13 @@ class StationContext:
             self.stationNo = int(setup_cfg["station_num"])
             self.controlstation_url = setup_cfg["controlstation_url"]
             self.BACKLIGHT_BRIGHT = setup_cfg.get("BACKLIGHT_BRIGHT", 1)
-            self.video_dir = setup_cfg.get("video_dir", "")
-            self.CHECK_WIFI_SCRIPT = setup_cfg.get("CHECK_WIFI_SCRIPT", "")
+            self.video_dir = setup_cfg.get("video_dir", "motion_images")
+            self.CHECK_WIFI_SCRIPT = setup_cfg.get(
+                "CHECK_WIFI_SCRIPT", "./check_status.sh"
+            )
+            self.CAMERA_STATUS_FILE = setup_cfg.get(
+                "CAMERA_STATUS_FILE", "./camera_status.txt"
+            )
 
             gpio_cfg = self.config["GPIO"]
             self.RELAY_OUT = int(gpio_cfg.get("RELAY_OUT", 27))
@@ -649,9 +655,7 @@ class StationContext:
                 statusf.write(f"Current humidity: {self.currentHumidity/10:0.1f}\n")
                 statusf.write(f"Current set temp: {self.currentSetTemp/10:0.1f}\n")
                 if self.nextSetTemp:
-                    statusf.write(
-                        f"Next set temp: {self.nextSetTemp}\n"
-                    )
+                    statusf.write(f"Next set temp: {self.nextSetTemp}\n")
                 heatOn = "No" if self.currentBoilerStatus == 0 else "Yes"
                 statusf.write(f"Heat on? {heatOn}\n")
                 statusf.write(f"Mins to set temp: {self.currentBoilerStatus}\n")
@@ -666,6 +670,7 @@ class StationContext:
                     f"Last PIR Event time: {datetime.fromtimestamp(self.lastPirTime).strftime('%Y%m%d %H:%M:%S') if self.lastPirTime != 0 else 'Never'}\n"
                 )
                 statusf.write(f"PIR:{self.displayOn}\n")
+                statusf.write(f"CAMERA:{'ON' if self.camera_state else 'OFF'}\n")
 
         except:
             print("Failed to write status file")

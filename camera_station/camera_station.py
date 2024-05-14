@@ -3,7 +3,7 @@ import sys
 import configparser
 import subprocess
 from datetime import datetime
-from os import listdir
+from os import listdir, path
 import fnmatch
 from time import sleep
 import requests
@@ -166,6 +166,8 @@ def sendMessage(conf, args: dict[str, str]):
             reset = True
         elif "pir" in arg:
             url_parts.append(f"&p={value}")
+        elif "camera_state" in arg:
+            url_parts.append(f"&c={value}")
         elif "temp" in arg:
             url_parts.append(f"&t={value}")
         elif "humid" in arg:
@@ -182,8 +184,8 @@ def sendMessage(conf, args: dict[str, str]):
         url_parts.append("&rs=0")
     url = "".join(url_parts)
     # Send HTTP request with a 5 sec timeout
-    if DEBUG:
-        print(f"Sending status update: {url}\n")
+    # if DEBUG:
+    #     print(f"Sending status update: {url}\n")
     try:
         resp = requests.get(url, timeout=5)
         # print(f"Received response code {resp.status_code}")
@@ -203,6 +205,8 @@ if __name__ == "__main__":
     lastTempTime = 0
     lastMonitorTime = 0
     currentPirState = 0
+    CAMERA_STATUS_FILE = cfg.get("CAMERA_STATUS_FILE", "./camera_status.txt")
+    cameraState = 1  # Assume on
 
     sleep(15)
     history: tuple[dict[int, float], dict[int, float]] = (dict(), dict())
@@ -215,11 +219,15 @@ if __name__ == "__main__":
             # Read temp and humidity and update latest files
             lastTempTime = nowTime
             getTemp(cfg, history)
+        if path.exists(CAMERA_STATUS_FILE):
+            with open(CAMERA_STATUS_FILE, "r", encoding="utf-8") as fp:
+                status = fp.read(1)
+                cameraState = 0 if status == "N" else 1
         # Check if any motion file is present - if so flag to masterstation that a motion event is occurring
         currentPirState = checkForMotionEvents(currentPirState, cfg)
         if (nowTime - lastMonitorTime) > MONITOR_PERIOD:
             # Tell masterstation still up and running
-            sendMessage(cfg, {"pir": currentPirState})
+            sendMessage(cfg, {"pir": currentPirState, "camera_state": cameraState})
             # Run the monitor script to upload new files, historic temp changes and check wifi still up
             lastMonitorTime = nowTime
             runScript(cfg)
