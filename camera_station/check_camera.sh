@@ -35,18 +35,22 @@ function turn_camera_on_off () {
     sudo systemctl is-active --quiet motion
     if [ $? -ne 0 ]
     then
+        echo "N" > camera_status.txt
         if [ $state = "Y" ]
         then
             #Motion isnt running
             echo "Motion isnt running and camera should be on"
             sudo service motion start
+            echo "Y" > camera_status.txt
         fi
     else
+        echo "Y" > camera_status.txt
         if [ $state = "N" ]
         then
             #Motion is running but should be off
             echo "Stopping motion service"
             sudo service motion stop
+            echo "N" > camera_status.txt
         fi
     fi
     if [ $state = "Y" ]
@@ -56,25 +60,7 @@ function turn_camera_on_off () {
 }
 
 #Start
-only_monitor_when_noones_home=$1
-camera_on=$2
+camera_on=$1
 
-#Check whether we should enable cameras
-#For internal cameras only turn off when someones home
-if [ $only_monitor_when_noones_home = 'Y' ]
-then
-    #Check if anyone's home
-    safeDevice=`cat safeDevices.txt`
-    dev=$(echo $safeDevice | sed 's/|/ /g')
-    for d in $dev
-    do
-        ping -c2 $d > /dev/null 2>&1
-        if [ $? == 0 ]
-        then
-            #Device on network
-            camera_on="N"
-        fi
-    done
-fi
 turn_camera_on_off $camera_on
 
