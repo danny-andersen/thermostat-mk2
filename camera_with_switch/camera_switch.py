@@ -134,7 +134,9 @@ def button_pressed():
         # Button pressed when lights on - turn them off
         if ctx.DEBUG:
             print(f"{nowTime}: Turning lights off")
+        # After lights have been turned off manually, disable PIR trigger for a period
         ctx.button_start_time = 0
+        ctx.button_stop_time = nowTime.timestamp()
         ctx.lastPirTime = 0
     else:
         # Start button period
@@ -230,8 +232,14 @@ def button_state(nowTime: datetime):
 
 
 def pir_state(nowTime: datetime):
-    # Returns true if PIR triggered less than trigger period ago
-    return (nowTime.timestamp() - ctx.lastPirTime) < ctx.PIR_TRIGGER_PERIOD
+    # Returns true if PIR triggered less than trigger period ago AND the light switch was turned off less than the switch time
+    # This allows PIR to be temporarily disabled if the lights are manually turned off
+    # It also prevents the lights coming straight back on if the PIR itself is still triggered
+    pir_set = (nowTime.timestamp() - ctx.lastPirTime) < ctx.PIR_TRIGGER_PERIOD
+    button_off_set = (
+        nowTime.timestamp() - ctx.button_stop_time
+    ) < ctx.SWITCH_TRIGGER_PERIOD
+    return pir_set and not button_off_set
 
 
 def stopMonitoring():

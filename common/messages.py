@@ -485,6 +485,7 @@ class StationContext:
     lastPirTime = 0
     boostTime = 0
     button_start_time = 0
+    button_stop_time = 0
     pir_stat = 0  # 0 is not triggered, 1 = triggered, -1 = disabled
     camera_state = 1  # 1 is motion is on and running, 0 motion service (camera) is off
     currentSentThermTemp = 1000.0
