@@ -3,7 +3,7 @@ import sys
 import configparser
 import subprocess
 from datetime import datetime
-from os import listdir, path
+from os import listdir, path, fork
 import fnmatch
 from time import sleep
 import requests
@@ -11,6 +11,7 @@ import requests
 # adding masterstation to the system path
 sys.path.insert(0, "../masterstation")
 from humidity_sensor import readTemp
+from air_quality_sensor import airQualitySensor
 
 CHECK_WIFI_SCRIPT = "./check_status.sh"
 
@@ -33,7 +34,8 @@ HUMID_AVG_FILE = "humidity_avg.txt"
 MONITOR_PERIOD = 30  # number of seconds between running monitor script
 TEMP_PERIOD = 30  # number of seconds between reading temp + humidty
 TEMP_ONLY = False  # Whether to only read the temperature (DS18B20 device) or both humidity and temp (DHT22)
-
+AIRQUALITY_MEASURE_PERIOD = 3
+AIRQUALITY_SEND_PERIOD = 30
 
 def getTemp(conf, hist: tuple[dict[int, float], dict[int, float]]):
     # Read temp and humidity from sensor and then send them to the masterstation
@@ -202,17 +204,27 @@ if __name__ == "__main__":
         cfg["READ_TEMP"].lower() == "yes"
     )
     DEBUG = (cfg["DEBUG"].lower() == "true") or (cfg["DEBUG"].lower() == "yes")
+    READ_AIRQUALITY = (cfg["READ_AIRQUALITY"].lower() == "true") or (
+        cfg["READ_AIRQUALITY"].lower() == "yes"
+    )
     lastTempTime = 0
+    lastAirQTime = 0
     lastMonitorTime = 0
+    lastSendTime = 0
     currentPirState = 0
     CAMERA_STATUS_FILE = cfg.get("CAMERA_STATUS_FILE", "./camera_status.txt")
     cameraState = 1  # Assume on
-
     sleep(15)
     history: tuple[dict[int, float], dict[int, float]] = (dict(), dict())
     sendMessage(cfg, {"reset": True})
     if DEBUG:
-        print(f"Entering loop reading Temp? {READ_TEMP}\n")
+        print(f"Entering loop, reading Temp? {READ_TEMP}, reading Air quality? {READ_AIRQUALITY}\n")
+    if READ_AIRQUALITY:
+	    #Fork a process to run the air quality sensor
+        processid = fork()
+        if processid == 0:
+           airQualitySensor(cfg)
+           exit
     while True:
         nowTime = datetime.now().timestamp()
         if READ_TEMP and (nowTime - lastTempTime) > TEMP_PERIOD:

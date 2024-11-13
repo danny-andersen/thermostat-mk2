@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from os import stat, path, remove
 import copy
 from multiprocessing import Process
@@ -221,6 +221,7 @@ def readThermStr():
     return (temp, humidity)
 
 
+
 def createThermMsg(temp: float, humidity: float):
     tempMsg = Temp()
     tempMsg.temp = c_int16(int(temp))
@@ -230,6 +231,54 @@ def createThermMsg(temp: float, humidity: float):
     # print(f"Temp: {tempMsg.temp}")
     return response
 
+# Format = GET /airqual?&a=<alarm status>&delta=<millis since reading taken>&bv=<battery voltage>&t=<temp>&p=<pressure>&h=<humidity&gr=gas_resistance&dac=idac&red=reducing&nh3=NH3&ox=oxidising 
+# Note: alarm status = 0 -> no CO alarm, 1 = CO warning, 2 = CO high, 3 = CO critical, 4 = methane/propane, 5 = Air quality issue
+@app.route("/airqual", methods=["GET"])
+def getAirQuality():
+    args = request.args
+    alarm = args.get("a", type=int, default=0)
+    delta = args.get("delta", type=int, default=0)
+    dt = datetime.now() - timedelta(milliseconds = delta)
+    timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
+    temp = args.get("t", type=float)
+    pressure = args.get("p", type=float)
+    humid = args.get("h", type=float)
+    reducing = args.get("red", type=float)
+    nh3 = args.get("nh3", type=float)
+    oxidising = args.get("ox", type=float)
+    bv = args.get("bv", type=float)
+    delta = args.get("delta", type=int)
+    reducingchg = args.get("redp", type=float)
+    nh3chg = args.get("nh3p", type=float)
+    oxchg = args.get("oxp", type=float)
+
+    temp = args.get("t", type=float)
+    pressure = args.get("p", type=float)
+    humid = args.get("h", type=float)
+    co2 = args.get("co2", type=float)
+    iaq = args.get("iaq", type=float)
+    voc = args.get("voc", type=float)
+    accuracy = args.get("acc", type=int)
+
+    if (reducing):
+        # Dangerous Gas sensor 
+        gas_fn = "gasamount.csv"
+        file_exists = path.isfile(gas_fn)
+        with open(gas_fn, "a") as file:
+            if not file_exists:
+                file.write("timestamp,alarm,reducing,reducingchg,nh3,nh3chg,oxidising,oxchg,battery\n")
+            # Write the variables in comma-separated format followed by a newline
+            file.write(f"{timestamp},{alarm},{reducing},{reducingchg},{nh3},{nh3chg},{oxidising},{oxchg}, {bv}\n")
+    else:
+        airquality_fn = "airquality.csv"
+        file_exists = path.isfile(airquality_fn)
+        with open(airquality_fn, "a") as file:
+            if not file_exists:
+                file.write("timestamp,temp,pressure,humid,iaq,co2,voc,accuracy\n")
+            # Write the variables in comma-separated format followed by a newline
+            file.write(f"{timestamp},{temp},{pressure},{humid},{iaq},{co2},{voc},{accuracy}\n")
+    response = getNoMessage()
+    return response
 
 # Format = /message?s=<station number>&rs=<1=rebooted>,&u=<1=update only, no resp msg needed>&t=<thermostat temp>&h=<humidity>&st=<set temp>&r=< mins to set temp, 0 off>&p=<1 sensor triggered, 0 sensor off>
 @app.route("/message", methods=["GET"])
