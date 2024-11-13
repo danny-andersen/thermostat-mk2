@@ -28,12 +28,12 @@ def sendAirQMessage(conf, data: dict[str, str]):
     masterstation_url = conf["masterstation_url"]
     DEBUG = (conf["DEBUG"].lower() == "true") or (conf["DEBUG"].lower() == "yes")
     url_parts = [f"{masterstation_url}/airqual?"]
-    url_parts.append(f"&p={data['raw_pressure']}")
-    url_parts.append(f"&t={data['temperature']}")
-    url_parts.append(f"&h={data['humidity']}")
-    url_parts.append(f"&iaq={data['iaq']}")
-    url_parts.append(f"&co2={data['co2_equivalent']}")
-    url_parts.append(f"&voc={data['breath_voc_equivalent']}")
+    url_parts.append(f"&p={data['raw_pressure']:.2f}")
+    url_parts.append(f"&t={data['temperature']:.2f}")
+    url_parts.append(f"&h={data['humidity']:.2f}")
+    url_parts.append(f"&iaq={data['iaq']:.2f}")
+    url_parts.append(f"&co2={data['co2_equivalent']:.2f}")
+    url_parts.append(f"&voc={data['breath_voc_equivalent']:.2f}")
     url_parts.append(f"&acc={data['iaq_accuracy']}")
     url = "".join(url_parts)
     # Send HTTP request with a 5 sec timeout
