@@ -19,6 +19,8 @@ function upload_images {
 cd "$(dirname "$0")"
 
 device_change_file=$(date +%Y%m%d)"_device_change.txt"
+airquality_file=$(date +%Y%m%d)"_airquality.csv"
+gassensor_file=$(date +%Y%m%d)"_gassensor.csv"
 sensor_dir=/sys/bus/w1/devices/28-051673fdeeff
 masterstation=../control_station
 video_picture_dir=motion_images/
@@ -159,6 +161,36 @@ if [ $? -eq 1 ]
 then
 	cp ${masterstation}/6_status.txt 6_status.txt
 	./dropbox_uploader.sh upload 6_status.txt 6_status.txt > /dev/null 2>&1
+fi
+
+if [ ! -f ${airquality_file} ]
+then
+    # Restart file every day
+    rm ${masterstation}/airquality.csv
+    >${airquality_file}
+elif [ -f ${masterstation}/airquality.csv ]
+then
+    diff -q ${airquality_file} ${masterstation}/airquality.csv  >/dev/null
+    if [ $? -eq 1 ]
+    then
+        cp ${masterstation}/airquality.csv ${airquality_file}
+        ./dropbox_uploader.sh upload ${airquality_file} ${airquality_file} > /dev/null 2>&1
+    fi
+fi
+
+if [ ! -f ${gassensor_file} ]
+then
+    # Restart file every day
+    rm ${masterstation}/gasamount.csv
+    >${gassensor_file}
+elif [ -f ${masterstation}/gasamount.csv ]
+then
+    diff -q ${masterstation}/gasamount.csv ${gassensor_file} >/dev/null
+    if [ $? -eq 1 ]
+    then
+        cp ${masterstation}/gasamount.csv ${gassensor_file}
+        ./dropbox_uploader.sh upload ${gassensor_file} ${gassensor_file} > /dev/null 2>&1
+    fi
 fi
 
 ./dropbox_uploader.sh download command.txt command.txt > /dev/null 2>&1
