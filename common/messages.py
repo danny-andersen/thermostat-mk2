@@ -4,7 +4,7 @@ import json
 from struct import unpack
 from enum import Enum
 import configparser
-from datetime import datetime
+from datetime import datetime, timedelta
 import jsonpickle
 
 
@@ -460,6 +460,7 @@ class StationContext:
     motdTime: int = 0
     schedSentTime = 0
     extTempTime = 0
+    tempTime = 0
     setTempTime = 0
     setHolidayTime = 0
     setSchedTime = 0
@@ -627,6 +628,7 @@ class StationContext:
             and self.currentTemp == other.currentTemp
             and self.currentHumidity == other.currentHumidity
             and self.extTempTime == other.extTempTime
+            and self.tempTime == other.tempTime
             and self.motdExpiry == other.motdExpiry
             and self.motdTime == other.motdTime
             and self.noOfSchedules == other.noOfSchedules
@@ -649,7 +651,7 @@ class StationContext:
                 statusFile = f"{self.stationNo}_{STATUS_FILE}"
 
             with open(statusFile, "w", encoding="utf-8") as statusf:
-                if self.currentTemp != -1000:
+                if self.currentTemp != -1000 and now.timestamp() - self.tempTime < 30*60:
                     statusf.write(f"Current temp: {self.currentTemp/10:0.1f}\n")
                 else:
                     statusf.write("Current temp: Not Set\n")

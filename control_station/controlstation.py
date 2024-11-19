@@ -305,6 +305,7 @@ def getMessage():
         sc.extTempTime = 0
         sc.setSchedTime = 0
         sc.currentTemp = -1000
+        sc.tempTime = 0
         sc.currentExtTemp = -1000
         sc.currentSetTemp = -1000
         sc.currentHumidity = -1000
@@ -314,6 +315,7 @@ def getMessage():
     temp = args.get("t", type=float)
     if temp:
         sc.currentTemp = temp
+        sc.tempTime = datetime.now().timestamp()
     humid = args.get("h", type=float)
     if humid:
         sc.currentHumidity = humid
