@@ -198,12 +198,15 @@ if [ -f command.txt ]
 then
     contents=$(cat command.txt)
     ./dropbox_uploader.sh delete command.txt
-    rm command.txt
     echo "Received command: $contents"
     if [ $contents = "reset" ];
     then
+        #Its a command to reset this station - do a local reset
+        rm command.txt
     	sudo reboot
     fi
+    #Move command to controlstation for execution
+    mv command.txt $masterstation
 fi
 
 ./dropbox_uploader.sh download setTemp.txt setTemp.txt > /dev/null 2>&1

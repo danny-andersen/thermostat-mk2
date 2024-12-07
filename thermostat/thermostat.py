@@ -184,6 +184,7 @@ def setCurrentTempMsg(ctx: StationContext, msgBytes: bytes):
     ctx.currentHumidity = tempMsg.humidity
     ctx.TEMP_PERIOD = int(ctx.config["timings"]["TEMP_PERIOD"])
     ctx.lastTempTime = datetime.now().timestamp()
+    ctx.tempTime = ctx.lastTempTime
     # if ctx.DEBUG:
     #     print(
     #         f"{datetime.now()}: Received current temp {ctx.currentTemp/10}C, humidity {ctx.currentHumidity/10}"
@@ -520,6 +521,7 @@ def runLoop(ctx: StationContext):
         if (nowSecs - ctx.lastTempTime) > ctx.TEMP_PERIOD:
             # Not received a temp update from control for more than a set period - read local
             ctx.lastTempTime = nowSecs
+            ctx.tempTime = nowSecs
             (ctx.currentTemp, ctx.currentHumidity) = readSHTC3Temp()
             ctx.currentTemp *= 10
             ctx.currentHumidity *= 10
