@@ -6,6 +6,7 @@
 from bme68x import BME68X
 import bme68xConstants as cnst
 import bsecConstants as bsec
+from os import path
 from time import sleep
 
 def control_LED(iaq):
@@ -19,6 +20,14 @@ def control_LED(iaq):
 
 bme = BME68X(cnst.BME68X_I2C_ADDR_HIGH, 0)
 bme.set_sample_rate(bsec.BSEC_SAMPLE_RATE_LP)
+bme_state_path = "bme688_state_file"
+if (path.isfile(bme_state_path)) :
+    print("Loading BME688 state file")
+    with open(bme_state_path, 'r') as stateFile:
+        conf_str =  stateFile.read()[1:-1]
+        conf_list = conf_str.split(",")
+        conf_int = [int(x) for x in conf_list]    
+        bme.set_bsec_state(conf_int)
 
 
 def get_data(sensor):
@@ -50,4 +59,4 @@ while(True):
     print(colors[led_color] +
           f'IAQ {bsec_data["iaq"]}' + ' ' + list(colors.values())[bsec_data["iaq_accuracy"]] + f'ACCURACY {bsec_data["iaq_accuracy"]}')
     print(bsec_data)
-    sleep(5)
+    sleep(3)
