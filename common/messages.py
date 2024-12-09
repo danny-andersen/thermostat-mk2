@@ -477,6 +477,11 @@ class StationContext:
     currentHumidity: float = -1000.0
     currentExtTemp: float = -1000.0
     noOfSchedules = 0
+    iaq = 0.0
+    c02 = 400.0
+    voc = 0.0
+    airq_accuracy = 0
+    gas_alarm = 0
 
     # Non-persisted fields:
     currentMotd = ""
@@ -638,7 +643,11 @@ class StationContext:
             and self.setTempTime == other.setTempTime
             and self.tempMotd == other.tempMotd
             and self.tempMotdTime == other.tempMotdTime
-            and self.stationNo == other.stationNo
+            and self.iaq == other.iaq
+            and self.c02 == other.c02
+            and self.airq_accuracy == other.airq_accuracy
+            and self.voc == other.voc
+            and self.gas_alarm == other.gas_alarm
         )
 
     def generateStatusFile(self):
@@ -674,6 +683,10 @@ class StationContext:
                 )
                 statusf.write(f"PIR:{self.displayOn}\n")
                 statusf.write(f"CAMERA:{'ON' if self.camera_state else 'OFF'}\n")
-
+                statusf.write(f"IAQ: {self.iaq}\n")
+                statusf.write(f"CO2: {self.c02}\n")
+                statusf.write(f"VOC: {self.voc}\n")
+                statusf.write(f"AIRQ_ACC: {self.airq_accuracy}\n")
+                statusf.write(f"GAS: {self.gas_alarm}\n")
         except:
             print("Failed to write status file")

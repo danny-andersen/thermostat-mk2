@@ -235,14 +235,13 @@ def createThermMsg(temp: float, humidity: float):
 # Note: alarm status = 0 -> no CO alarm, 1 = CO warning, 2 = CO high, 3 = CO critical, 4 = methane/propane, 5 = Air quality issue
 @app.route("/airqual", methods=["GET"])
 def getAirQuality():
+    sc: StationContext = StationContext.getSavedContext(1)
+    startContext = copy.deepcopy(sc)
     args = request.args
     alarm = args.get("a", type=int, default=0)
     delta = args.get("delta", type=int, default=0)
     dt = datetime.now() - timedelta(milliseconds = delta)
     timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
-    temp = args.get("t", type=float)
-    pressure = args.get("p", type=float)
-    humid = args.get("h", type=float)
     reducing = args.get("red", type=float)
     nh3 = args.get("nh3", type=float)
     oxidising = args.get("ox", type=float)
@@ -269,6 +268,7 @@ def getAirQuality():
                 file.write("timestamp,alarm,reducing,reducingchg,nh3,nh3chg,oxidising,oxchg,battery\n")
             # Write the variables in comma-separated format followed by a newline
             file.write(f"{timestamp},{alarm},{reducing},{reducingchg},{nh3},{nh3chg},{oxidising},{oxchg}, {bv}\n")
+        sc.gas_alarm = alarm
     else:
         airquality_fn = "airquality.csv"
         file_exists = path.isfile(airquality_fn)
@@ -277,6 +277,12 @@ def getAirQuality():
                 file.write("timestamp,temp,pressure,humid,iaq,co2,voc,accuracy\n")
             # Write the variables in comma-separated format followed by a newline
             file.write(f"{timestamp},{temp},{pressure},{humid},{iaq},{co2},{voc},{accuracy}\n")
+        sc.iaq = iaq
+        sc.c02 = co2
+        sc.airq_accuracy = accuracy
+        sc.voc = voc
+    if sc.saveStationContext(startContext):
+        sc.generateStatusFile()
     response = getNoMessage()
     return response
 
