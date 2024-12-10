@@ -50,45 +50,52 @@ def sendAirQMessage(conf, data: dict[str, str]):
 
 
 def airQualitySensor(cfg):
-    DEBUG = (cfg["DEBUG"].lower() == "true") or (cfg["DEBUG"].lower() == "yes")
-    bme = BME68X(cnst.BME68X_I2C_ADDR_HIGH, 0)
-    bme.set_sample_rate(bsec.BSEC_SAMPLE_RATE_LP)
-    bme_state_path = "bme688_state_file"
-    if (path.isfile(bme_state_path)) :
-        print("Loading state file")
-        with open(bme_state_path, 'r') as stateFile:
-            conf_str =  stateFile.read()[1:-1]
-            conf_list = conf_str.split(",")
-            conf_int = [int(x) for x in conf_list]    
-            bme.set_bsec_state(conf_int)
-    lastStateDate = datetime.now()
-    lastSendTime = 0
+    while True:
+        #Outer loop allows sensor device to be restarted if calibration is lost
+        DEBUG = (cfg["DEBUG"].lower() == "true") or (cfg["DEBUG"].lower() == "yes")
+        bme = BME68X(cnst.BME68X_I2C_ADDR_HIGH, 0)
+        bme.set_sample_rate(bsec.BSEC_SAMPLE_RATE_LP)
+        bme_state_path = "bme688_state_file"
+        if (path.isfile(bme_state_path)) :
+            print("Loading state file")
+            with open(bme_state_path, 'r') as stateFile:
+                conf_str =  stateFile.read()[1:-1]
+                conf_list = conf_str.split(",")
+                conf_int = [int(x) for x in conf_list]    
+                bme.set_bsec_state(conf_int)
+        lastStateDate = datetime.now()
+        lastSendTime = 0
+        calibrated = False
 
-    while (True):
-        bsec_data = get_data(bme)
-        while bsec_data == None:
+        while (True):
             bsec_data = get_data(bme)
-        dt = datetime.now()
+            while bsec_data == None:
+                bsec_data = get_data(bme)
+            dt = datetime.now()
+            if (bsec_data['iaq_accuracy'] == 3):
+                calibrated = True
+            if calibrated and bsec_data['iaq_accuracy'] < 2:
+                #Calibration has been lost - restart sensor
+                break
+            if DEBUG:
+                print(bsec_data)
+                
+            if (dt.timestamp() - lastSendTime) > AIRQUALITY_SEND_PERIOD:
+                sendAirQMessage(cfg, bsec_data)
+                lastSendTime = dt.timestamp()
+            #Save state every 24 hours
+            timeSinceLastSave = dt - lastStateDate
+            if (timeSinceLastSave > timedelta(hours=24)) :
+                with open(bme_state_path, 'w') as state_file:
+                    state_file.write(str(bme.get_bsec_state())) 
+                    state_file.close()
+                    lastStateDate = dt
 
-        if DEBUG:
-            print(bsec_data)
-            
-        if (dt.timestamp() - lastSendTime) > AIRQUALITY_SEND_PERIOD:
-            sendAirQMessage(cfg, bsec_data)
-            lastSendTime = dt.timestamp()
-        #Save state every 24 hours
-        timeSinceLastSave = dt - lastStateDate
-        if (timeSinceLastSave > timedelta(hours=24)) :
-            with open(bme_state_path, 'w') as state_file:
-               state_file.write(str(bme.get_bsec_state())) 
-               state_file.close()
-            lastStateDate = dt
-
-        st = datetime.now()
-        execTime = (st - dt).microseconds
-        sleepTime = AIRQUALITY_MEASURE_PERIOD - execTime
-        if (sleepTime > 0):
-            sleep(sleepTime/1000000.0)
+            st = datetime.now()
+            execTime = (st - dt).microseconds
+            sleepTime = AIRQUALITY_MEASURE_PERIOD - execTime
+            if (sleepTime > 0):
+                sleep(sleepTime/1000000.0)
 
 
 if __name__ == "__main__":

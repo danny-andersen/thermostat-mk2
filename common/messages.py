@@ -481,7 +481,9 @@ class StationContext:
     c02 = 400.0
     voc = 0.0
     airq_accuracy = 0
+    lastQtime = 0
     gas_alarm = 0
+    lastGasTime = 0
 
     # Non-persisted fields:
     currentMotd = ""
@@ -646,8 +648,10 @@ class StationContext:
             and self.iaq == other.iaq
             and self.c02 == other.c02
             and self.airq_accuracy == other.airq_accuracy
+            and self.lastQtime == other.lastQtime
             and self.voc == other.voc
             and self.gas_alarm == other.gas_alarm
+            and self.lastGasTime == other.lastGasTime
         )
 
     def generateStatusFile(self):
@@ -687,6 +691,8 @@ class StationContext:
                 statusf.write(f"CO2: {self.c02}\n")
                 statusf.write(f"VOC: {self.voc}\n")
                 statusf.write(f"AIRQ_ACC: {self.airq_accuracy}\n")
+                statusf.write(f"Last Q time: {datetime.fromtimestamp(self.lastQtime).strftime('%Y%m%d %H:%M:%S') if self.lastQtime != 0 else 'Never'}\n")
                 statusf.write(f"GAS: {self.gas_alarm}\n")
+                statusf.write(f"Last Gas time: {datetime.fromtimestamp(self.lastGasTime).strftime('%Y%m%d %H:%M:%S') if self.lastGasTime != 0 else 'Never'}\n")
         except:
             print("Failed to write status file")

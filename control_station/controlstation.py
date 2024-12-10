@@ -269,6 +269,8 @@ def getAirQuality():
             # Write the variables in comma-separated format followed by a newline
             file.write(f"{timestamp},{alarm},{reducing},{reducingchg},{nh3},{nh3chg},{oxidising},{oxchg}, {bv}\n")
         sc.gas_alarm = alarm
+        sc.lastGasTime = datetime.now().timestamp()
+
     else:
         airquality_fn = "airquality.csv"
         file_exists = path.isfile(airquality_fn)
@@ -281,6 +283,8 @@ def getAirQuality():
         sc.c02 = co2
         sc.airq_accuracy = accuracy
         sc.voc = voc
+        sc.lastQtime = datetime.now().timestamp()
+ 
     if sc.saveStationContext(startContext):
         sc.generateStatusFile()
     response = getNoMessage()
