@@ -484,6 +484,7 @@ class StationContext:
     lastQtime = 0
     gas_alarm = 0
     lastGasTime = 0
+    batteryV = 0
 
     # Non-persisted fields:
     currentMotd = ""
@@ -652,6 +653,7 @@ class StationContext:
             and self.voc == other.voc
             and self.gas_alarm == other.gas_alarm
             and self.lastGasTime == other.lastGasTime
+            and self.batteryV == other.batteryV
         )
 
     def generateStatusFile(self):
@@ -694,5 +696,6 @@ class StationContext:
                 statusf.write(f"Last Q time: {datetime.fromtimestamp(self.lastQtime).strftime('%Y%m%d %H:%M:%S') if self.lastQtime != 0 else 'Never'}\n")
                 statusf.write(f"GAS: {self.gas_alarm}\n")
                 statusf.write(f"Last Gas time: {datetime.fromtimestamp(self.lastGasTime).strftime('%Y%m%d %H:%M:%S') if self.lastGasTime != 0 else 'Never'}\n")
+                statusf.write(f"Gas BV: {self.batteryV}\n")
         except:
             print("Failed to write status file")

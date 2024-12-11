@@ -270,6 +270,7 @@ def getAirQuality():
             file.write(f"{timestamp},{alarm},{reducing},{reducingchg},{nh3},{nh3chg},{oxidising},{oxchg}, {bv}\n")
         sc.gas_alarm = alarm
         sc.lastGasTime = datetime.now().timestamp()
+        sc.batteryV = bv
 
     else:
         airquality_fn = "airquality.csv"
