@@ -21,6 +21,7 @@ cd "$(dirname "$0")"
 device_change_file=$(date +%Y%m%d)"_device_change.txt"
 airquality_file=$(date +%Y%m%d)"_airquality.csv"
 gassensor_file=$(date +%Y%m%d)"_gassensor.csv"
+co2sensor_file=$(date +%Y%m%d)"_co2sensor.csv"
 sensor_dir=/sys/bus/w1/devices/28-051673fdeeff
 masterstation=../control_station
 video_picture_dir=motion_images/
@@ -190,6 +191,21 @@ then
     then
         cp ${masterstation}/gasamount.csv ${gassensor_file}
         ./dropbox_uploader.sh upload ${gassensor_file} ${gassensor_file} > /dev/null 2>&1
+    fi
+fi
+
+if [ ! -f ${co2sensor_file} ]
+then
+    # Restart file every day
+    rm ${masterstation}/co2_sensor.csv
+    >${co2sensor_file}
+elif [ -f ${masterstation}/co2_sensor.csv ]
+then
+    diff -q ${masterstation}/co2_sensor.csv ${co2sensor_file} >/dev/null
+    if [ $? -eq 1 ]
+    then
+        cp ${masterstation}/co2_sensor.csv ${co2sensor_file}
+        ./dropbox_uploader.sh upload ${co2sensor_file} ${co2sensor_file} > /dev/null 2>&1
     fi
 fi
 

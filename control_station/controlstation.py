@@ -272,7 +272,7 @@ def getAirQuality():
         sc.lastGasTime = datetime.now().timestamp()
         sc.batteryV = bv
 
-    else:
+    elif iaq:
         airquality_fn = "airquality.csv"
         file_exists = path.isfile(airquality_fn)
         with open(airquality_fn, "a") as file:
@@ -281,10 +281,19 @@ def getAirQuality():
             # Write the variables in comma-separated format followed by a newline
             file.write(f"{timestamp},{temp},{pressure},{humid},{iaq},{co2},{voc},{accuracy}\n")
         sc.iaq = iaq
-        sc.c02 = co2
         sc.airq_accuracy = accuracy
         sc.voc = voc
         sc.lastQtime = datetime.now().timestamp()
+    elif co2:
+        co2_fn = "co2_sensor.csv"
+        file_exists = path.isfile(co2_fn)
+        with open(co2_fn, "a") as file:
+            if not file_exists:
+                file.write("timestamp,co2\n")
+            # Write the variables in comma-separated format followed by a newline
+            file.write(f"{timestamp},{co2}\n")
+        sc.c02 = co2
+      
  
     if sc.saveStationContext(startContext):
         sc.generateStatusFile()
