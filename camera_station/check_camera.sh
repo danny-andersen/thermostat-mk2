@@ -53,10 +53,10 @@ function turn_camera_on_off () {
             echo "N" > camera_status.txt
         fi
     fi
-    if [ $state = "Y" ]
-    then
-        check_camera_working
-    fi
+    #if [ $state = "Y" ]
+    #then
+    #    check_camera_working
+    #fi
 }
 
 #Start
