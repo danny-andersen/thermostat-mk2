@@ -180,6 +180,8 @@ def setMotd(ctx: StationContext, msgBytes: bytes):
 
 def setCurrentTempMsg(ctx: StationContext, msgBytes: bytes):
     tempMsg = Temp.unpack(msgBytes)
+    # Note Temp received is *10 of actual, so divide by 10
+    # This was done to avoid floating point numbers in the original implementation on Arduino
     ctx.currentTemp = tempMsg.temp
     ctx.currentHumidity = tempMsg.humidity
     ctx.TEMP_PERIOD = int(ctx.config["timings"]["TEMP_PERIOD"])
@@ -350,11 +352,27 @@ def retrieveScheduledSetTemp(
     return retSched
 
 
-def checkOnHoliday(ctx: StationContext, secs: float):
+def checkOnHoliday(ctx: StationContext, secs: float, setTemp: float) -> float:
     retTemp = -1000.0
     if secs > ctx.currentHoliday.startDate and secs < ctx.currentHoliday.endDate:
         # On holiday
-        retTemp = ctx.currentHoliday.temp
+        hoursToEnd : float = (ctx.currentHoliday.endDate - secs) / 3600.0
+        endDate: datetime = datetime.fromtimestamp(ctx.currentHoliday.endDate)
+        schedTemp: float = retrieveScheduledSetTemp(ctx, endDate).temp
+        if schedTemp > setTemp:
+            # If the scheduled temp at end of holiday is higher than the current set temp, 
+            # then we will heat up to the scheduled temp, otherwise heat up to the current set temp
+            setTemp = schedTemp 
+        # Note: Temp is *10 of actual
+        tempDiff : float = (setTemp + ctx.HYSTERISIS - ctx.currentTemp )/10.0
+        hoursReqdToHeat : float = tempDiff / HEATING_RATE
+        if hoursReqdToHeat > hoursToEnd:
+            # Turn back on heating so that we reach setTemp by the time the holiday period ends
+            # Note that if we heat up too fast, we will turn off the heating
+            retTemp = setTemp
+        else:
+            # Leave heating off
+            retTemp = ctx.currentHoliday.temp
     return retTemp
 
 
@@ -478,6 +496,8 @@ def runLoop(ctx: StationContext):
     lastMin: int = -1
     schedSetTemp: float = -1000
     newSetTemp: ScheduleElement = ScheduleElement()
+    holidayTemp: float = -1000
+    
     while True:
         nowTime = datetime.now()
         nowSecs = nowTime.timestamp()
@@ -544,8 +564,8 @@ def runLoop(ctx: StationContext):
             mins = nextSet.start - (hours * 60)
             ctx.nextSetTemp = f"{nextSet.temp/10:0.1f}@{hours:02d}:{mins:02d}"
             lastMin = nowTime.minute
+            holidayTemp = checkOnHoliday(ctx, nowSecs, schedSetTemp)
 
-        holidayTemp = checkOnHoliday(ctx, nowSecs)
         # We have three set temperatures:
         # currentManSetTemp is one that has been set onscreen or sent remotely
         # schedSetTemp is one from the current schedule
