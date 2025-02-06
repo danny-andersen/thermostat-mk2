@@ -1,3 +1,4 @@
+import RPi.GPIO as GPIO
 from bme68x import BME68X
 import bme68xConstants as cnst
 import bsecConstants as bsec
@@ -7,8 +8,9 @@ from datetime import datetime, timedelta
 import requests
 import configparser
 
-AIRQUALITY_MEASURE_PERIOD = 2800000   #in microseconds == 2.8 seconds
+AIRQUALITY_MEASURE_PERIOD = 2800000  # in microseconds == 2.8 seconds
 AIRQUALITY_SEND_PERIOD = 30
+
 
 def get_data(sensor):
     data = {}
@@ -18,15 +20,16 @@ def get_data(sensor):
         print(e)
         return None
     if data == None or data == {}:
-        #Sensor not ready for next measurement - wait a bit
-        #Note that it must not exceed 3.1875 seconds between calls
+        # Sensor not ready for next measurement - wait a bit
+        # Note that it must not exceed 3.1875 seconds between calls
         sleep(0.1)
         return None
     else:
         return data
 
+
 # Format = GET /airqual?&a=<alarm status>&delta=<millis since reading taken>&bv=<battery voltage>&t=<temp>&p=<pressure>
-# &h=<humidity&gr=gas_resistance&dac=idac&red=reducing&nh3=NH3&ox=oxidising 
+# &h=<humidity&gr=gas_resistance&dac=idac&red=reducing&nh3=NH3&ox=oxidising
 def sendAirQMessage(conf, data: dict[str, str]):
     masterstation_url = conf["masterstation_url"]
     DEBUG = (conf["DEBUG"].lower() == "true") or (conf["DEBUG"].lower() == "yes")
@@ -50,52 +53,66 @@ def sendAirQMessage(conf, data: dict[str, str]):
 
 
 def airQualitySensor(cfg):
+    GPIO.setmode(GPIO.BCM)
+    BME_POWER_GPIO = 17
+    GPIO.setup(BME_POWER_GPIO, GPIO.OUT)
+    # Make sure sensor has been powered down
+    GPIO.output(BME_POWER_GPIO, GPIO.LOW)
+    sleep(2)
     while True:
-        #Outer loop allows sensor device to be restarted if calibration is lost
+        # Outer loop allows sensor device to be restarted if calibration is lost
         DEBUG = (cfg["DEBUG"].lower() == "true") or (cfg["DEBUG"].lower() == "yes")
+        # Power on BME sensor
+        GPIO.output(BME_POWER_GPIO, GPIO.HIGH)
+        # Wait for power on
+        sleep(2)
         bme = BME68X(cnst.BME68X_I2C_ADDR_HIGH, 0)
         bme.set_sample_rate(bsec.BSEC_SAMPLE_RATE_LP)
         bme_state_path = "bme688_state_file"
-        if (path.isfile(bme_state_path)) :
+        if path.isfile(bme_state_path):
             print("Loading state file")
-            with open(bme_state_path, 'r') as stateFile:
-                conf_str =  stateFile.read()[1:-1]
+            with open(bme_state_path, "r") as stateFile:
+                conf_str = stateFile.read()[1:-1]
                 conf_list = conf_str.split(",")
-                conf_int = [int(x) for x in conf_list]    
+                conf_int = [int(x) for x in conf_list]
                 bme.set_bsec_state(conf_int)
         lastStateDate = datetime.now()
         lastSendTime = 0
         calibrated = False
 
-        while (True):
+        while True:
             bsec_data = get_data(bme)
             while bsec_data == None:
                 bsec_data = get_data(bme)
             dt = datetime.now()
-            if (bsec_data['iaq_accuracy'] == 3):
+            if bsec_data["iaq_accuracy"] == 3:
                 calibrated = True
-            if calibrated and bsec_data['iaq_accuracy'] < 2:
-                #Calibration has been lost - restart sensor
+            if calibrated and bsec_data["iaq_accuracy"] < 2:
+                # Calibration has been lost - restart sensor
                 break
             if DEBUG:
                 print(bsec_data)
-                
+
             if (dt.timestamp() - lastSendTime) > AIRQUALITY_SEND_PERIOD:
                 sendAirQMessage(cfg, bsec_data)
                 lastSendTime = dt.timestamp()
-            #Save state every 24 hours
+            # Save state every 24 hours
             timeSinceLastSave = dt - lastStateDate
-            if (timeSinceLastSave > timedelta(hours=24)) :
-                with open(bme_state_path, 'w') as state_file:
-                    state_file.write(str(bme.get_bsec_state())) 
+            if timeSinceLastSave > timedelta(hours=24):
+                with open(bme_state_path, "w") as state_file:
+                    state_file.write(str(bme.get_bsec_state()))
                     state_file.close()
                     lastStateDate = dt
 
             st = datetime.now()
             execTime = (st - dt).microseconds
             sleepTime = AIRQUALITY_MEASURE_PERIOD - execTime
-            if (sleepTime > 0):
-                sleep(sleepTime/1000000.0)
+            if sleepTime > 0:
+                sleep(sleepTime / 1000000.0)
+        # Lost device or calibration - power down
+        print("BME device not responding or lost calibration - restarting")
+        GPIO.output(BME_POWER_GPIO, GPIO.LOW)
+        sleep(2)
 
 
 if __name__ == "__main__":
@@ -103,6 +120,5 @@ if __name__ == "__main__":
     config.read("../camera_station/camera_station.ini")
     cfg = config["setup"]
     cfg["DEBUG"] = "True"
-    
+
     airQualitySensor(cfg)
-    
