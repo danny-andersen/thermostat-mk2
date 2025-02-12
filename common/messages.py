@@ -61,7 +61,7 @@ EXT_TEMP_EXPIRY_SECS = 3600  # an hour
 SET_TEMP_EXPIRY_SECS = 30 * 60  # 30 mins
 SET_SCHED_EXPIRY_SECS = 30 * 60  # 30 mins
 TEMP_MOTD_EXPIRY_SECS = 60  # 1 min
-HEATING_RATE = 2.5 # 2.5 degrees per hour
+HEATING_RATE = 2.0 # 2.0 degrees per hour
 
 class LedColour(Enum):
     RED = 1

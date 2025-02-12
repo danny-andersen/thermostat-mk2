@@ -256,11 +256,12 @@ fi
 
 mins=$(date +%M)
 
-# #Refresh picture every hour
-# if [ $mins -eq 0 ]
-# then
-#     touch take-photo.txt
-# fi
+if [ $mins -eq 0 ]
+then
+    #Every hour, get external ip address
+    curl ifconfig.me > external_ip.txt
+    ./dropbox_uploader.sh upload external_ip.txt external_ip.txt > /dev/null 2>&1
+fi
 
 #Update weather every 30mins
 istime=$((10#$mins % 30))
@@ -271,6 +272,7 @@ then
    ./getWeather.sh > /dev/null 2>&1
    cd -
 fi
+
 
 #Check up on temperature
 temp="FAIL"
