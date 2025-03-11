@@ -221,7 +221,6 @@ def readThermStr():
     return (temp, humidity)
 
 
-
 def createThermMsg(temp: float, humidity: float):
     tempMsg = Temp()
     tempMsg.temp = c_int16(int(temp))
@@ -231,7 +230,8 @@ def createThermMsg(temp: float, humidity: float):
     # print(f"Temp: {tempMsg.temp}")
     return response
 
-# Format = GET /airqual?&a=<alarm status>&delta=<millis since reading taken>&bv=<battery voltage>&t=<temp>&p=<pressure>&h=<humidity&gr=gas_resistance&dac=idac&red=reducing&nh3=NH3&ox=oxidising 
+
+# Format = GET /airqual?&a=<alarm status>&delta=<millis since reading taken>&bv=<battery voltage>&t=<temp>&p=<pressure>&h=<humidity&gr=gas_resistance&dac=idac&red=reducing&nh3=NH3&ox=oxidising
 # Note: alarm status = 0 -> no CO alarm, 1 = CO warning, 2 = CO high, 3 = CO critical, 4 = methane/propane, 5 = Air quality issue
 @app.route("/airqual", methods=["GET"])
 def getAirQuality():
@@ -240,7 +240,7 @@ def getAirQuality():
     args = request.args
     alarm = args.get("a", type=int, default=0)
     delta = args.get("delta", type=int, default=0)
-    dt = datetime.now() - timedelta(milliseconds = delta)
+    dt = datetime.now() - timedelta(milliseconds=delta)
     timestamp = dt.strftime("%Y-%m-%d %H:%M:%S")
     reducing = args.get("red", type=float)
     nh3 = args.get("nh3", type=float)
@@ -259,15 +259,19 @@ def getAirQuality():
     voc = args.get("voc", type=float)
     accuracy = args.get("acc", type=int)
 
-    if (reducing):
-        # Dangerous Gas sensor 
+    if reducing:
+        # Dangerous Gas sensor
         gas_fn = "gasamount.csv"
         file_exists = path.isfile(gas_fn)
         with open(gas_fn, "a") as file:
             if not file_exists:
-                file.write("timestamp,alarm,reducing,reducingchg,nh3,nh3chg,oxidising,oxchg,battery\n")
+                file.write(
+                    "timestamp,alarm,reducing,reducingchg,nh3,nh3chg,oxidising,oxchg,battery\n"
+                )
             # Write the variables in comma-separated format followed by a newline
-            file.write(f"{timestamp},{alarm},{reducing},{reducingchg},{nh3},{nh3chg},{oxidising},{oxchg}, {bv}\n")
+            file.write(
+                f"{timestamp},{alarm},{reducing},{reducingchg},{nh3},{nh3chg},{oxidising},{oxchg}, {bv}\n"
+            )
         sc.gas_alarm = alarm
         sc.lastGasTime = datetime.now().timestamp()
         sc.batteryV = bv
@@ -279,7 +283,9 @@ def getAirQuality():
             if not file_exists:
                 file.write("timestamp,temp,pressure,humid,iaq,co2,voc,accuracy\n")
             # Write the variables in comma-separated format followed by a newline
-            file.write(f"{timestamp},{temp},{pressure},{humid},{iaq},{co2},{voc},{accuracy}\n")
+            file.write(
+                f"{timestamp},{temp},{pressure},{humid},{iaq},{co2},{voc},{accuracy}\n"
+            )
         sc.iaq = iaq
         sc.airq_accuracy = accuracy
         sc.voc = voc
@@ -293,12 +299,29 @@ def getAirQuality():
             # Write the variables in comma-separated format followed by a newline
             file.write(f"{timestamp},{co2}\n")
         sc.c02 = co2
-      
- 
+
     if sc.saveStationContext(startContext):
         sc.generateStatusFile()
     response = getNoMessage()
     return response
+
+
+# Format = GET /powerc?s=<station number>&r=<relay status in hex>
+# e.g. /power?s=10&r=3   //Relays 0 and 1 are on
+# Returns the state that the relays should be in
+@app.route("/powerc", methods=["GET"])
+def getPowerControllerCommand():
+    args = request.args
+    # TODO: Read a state file for this station and drive the relays to the required state using a timestamped state stack
+    #          Save the new state in the state file.
+    # Response: relays=<status in hex>
+    relayStatus = 3
+    msg = "relay={relayStatus}"
+    # Print out a message to the log if the state is changed.
+    print(f"Power controller: Relay state now {hex(relayStatus)}")
+    response = Response(response=msg, mimetype="text/plain")
+    return response
+
 
 # Format = /message?s=<station number>&rs=<1=rebooted>,&u=<1=update only, no resp msg needed>&t=<thermostat temp>&h=<humidity>&st=<set temp>&r=< mins to set temp, 0 off>&p=<1 sensor triggered, 0 sensor off>
 @app.route("/message", methods=["GET"])
