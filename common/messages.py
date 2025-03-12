@@ -29,6 +29,7 @@ SET_THERM_TEMP_MSG = 13
 RESET_MSG = 14
 LIGHT_COMMAND_MSG = 15
 BOOST_COMMAND_MSG = 16
+POWER_COMMAND_MSG = 17
 
 MOTD_FILE = "motd.txt"
 MOTD_EXPIRY_SECS = 3600  # an hour
@@ -39,6 +40,7 @@ SET_TEMP_FILE = "setTemp.txt"
 STATUS_FILE = "status.txt"
 STATION_FILE = "-context.json"
 COMMAND_FILE = "command.txt"
+POWER_COMMAND_FILE = "power_command.txt"
 DISPLAY_ON_FILE = "displayOn.txt"
 TEMPERATURE_FILE_NEW = "../monitor_home/temperature.txt"
 HUMIDITY_FILE_NEW = "../monitor_home/humidity.txt"
@@ -149,6 +151,17 @@ class AdjSetTimeConstants(Structure):
     ]  # in tenths
 
 
+class PowerControlMsg(Structure):
+    _fields_ = [
+        ("relay", c_ubyte),
+        ("state", c_ubyte),
+    ]
+    
+    @staticmethod
+    def unpack(msgBytes: bytes):
+        (r,s) = unpack("<BB", msgBytes)
+        return PowerControlMsg(r, s)
+    
 # class Motd(Structure):
 #     _fields_ = [
 #         ("motdStr", c_char * MAX_MOTD_SIZE), #Message of the day, with a minimum of one character

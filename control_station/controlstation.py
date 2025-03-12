@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from os import stat, path, remove
 import copy
 from multiprocessing import Process
+import random
 from time import sleep
 import subprocess
 import atexit
@@ -307,7 +308,7 @@ def getAirQuality():
 
 
 # Format = GET /powerc?s=<station number>&r=<relay status in hex>
-# e.g. /power?s=10&r=3   //Relays 0 and 1 are on
+# e.g. /power?s=20&r=3   //Relays 1 and 2 are on
 # Returns the state that the relays should be in
 @app.route("/powerc", methods=["GET"])
 def getPowerControllerCommand():
@@ -315,11 +316,68 @@ def getPowerControllerCommand():
     # TODO: Read a state file for this station and drive the relays to the required state using a timestamped state stack
     #          Save the new state in the state file.
     # Response: relays=<status in hex>
-    relayStatus = 3
-    msg = "relay={relayStatus}"
+    relayStatus = args.get("r", type=int)
     # Print out a message to the log if the state is changed.
-    print(f"Power controller: Relay state now {hex(relayStatus)}")
-    response = Response(response=msg, mimetype="text/plain")
+    print(f"Power controller: Relay state: {hex(relayStatus)}")
+    response = getNoMessage()
+    if path.exists(POWER_COMMAND_FILE):
+        lastModTime = stat(POWER_COMMAND_FILE).st_mtime
+        currentTime = datetime.now().timestamp()
+        timeDiff = currentTime - lastModTime
+        remainPtr = 0
+        command = None
+        with open(POWER_COMMAND_FILE, "r+", encoding="utf-8") as f:
+            try:
+                # Read all lines in the file
+                lines = f.readlines()
+                if lines == None or len(lines) == 0:
+                    # No commands in file
+                    remove(POWER_COMMAND_FILE)
+                    remainPtr = -1
+                else:
+                    # Parse first line to get the current command
+                    fields = lines[0].split("=")
+                    # If first field is 'D' then delay for the number of seconds in the second field before sending the command
+                    if fields[0] == "D":
+                        delay = int(fields[1])
+                        if timeDiff < delay:
+                            # Delay not yet reached - return no message
+                            lines[0] = f"D={int(delay - timeDiff)}\n"
+                            remainPtr = 0
+                        else:    
+                            # Delay has been reached - send the next command
+                            if len(lines) >= 1:
+                                command = lines[1]
+                                remainPtr = 2
+                    else:
+                        # Return the command
+                        command = lines[0]
+                        remainPtr = 1
+                if remainPtr < len(lines):
+                    # Write the remaining lines back to the file
+                    f.seek(0)  # Go to the start of the file    
+                    f.truncate()  # Clear the file
+                    f.writelines(lines[remainPtr:]) # Write the remaining lines back to the file
+                else:
+                    # No more commands - delete the file
+                    remove(POWER_COMMAND_FILE)
+            except Exception as e:
+                print(f"Power controller: Failed to read command file: {e}")
+                # raise e
+                pass
+        if command:
+            fields = command.split("=")
+            powerc = PowerControlMsg()
+            powerc.relay = c_ubyte(int(fields[0]))
+            powerc.state = c_ubyte(int(fields[1]))
+            msgBytes = getMessageEnvelope(
+                POWER_COMMAND_MSG, bytearray(powerc), sizeof(PowerControlMsg)
+            )
+            response = Response(
+                response=msgBytes, mimetype="application/octet-stream"
+            )
+            # print(f"Power controller: {command}")
+            remainPtr = 1
     return response
 
 
