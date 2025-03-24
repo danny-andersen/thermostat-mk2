@@ -326,7 +326,7 @@ def getPowerControllerCommand():
         lastModTime = stat(POWER_COMMAND_FILE).st_mtime
         currentTime = datetime.now().timestamp()
         timeDiff = currentTime - lastModTime
-        remainPtr = 0
+        remainPtr = -1
         command = None
         with open(POWER_COMMAND_FILE, "r+", encoding="utf-8") as f:
             try:
@@ -335,31 +335,36 @@ def getPowerControllerCommand():
                 if lines == None or len(lines) == 0:
                     # No commands in file
                     remove(POWER_COMMAND_FILE)
-                    remainPtr = -1
                 else:
-                    # Parse first line to get the current command
-                    fields = lines[0].split("=")
-                    # If first field is 'D' then delay for the number of seconds in the second field before sending the command
-                    if fields[0] == "D":
-                        delay = int(fields[1])
-                        if timeDiff < delay:
-                            # Delay not yet reached - return no message
-                            lines[0] = f"D={int(delay - timeDiff)}\n"
-                            remainPtr = 0
-                        else:    
-                            # Delay has been reached - send the next command
-                            if len(lines) >= 1:
-                                command = lines[1]
-                                remainPtr = 2
-                    else:
-                        # Return the command
-                        command = lines[0]
-                        remainPtr = 1
-                if remainPtr < len(lines):
+                    lineNum = 0
+                    while remainPtr == -1:
+                        # Parse next line to get the current command
+                        fields = lines[lineNum].split("=")
+                        if fields[0].strip().startswith("#"):
+                            # Comment field - skip
+                            lineNum += 1
+                        elif fields[0] == "D":
+                            # If first field is 'D' then delay for the number of seconds in the second field before sending the command
+                            delay = int(fields[1])
+                            if timeDiff < delay:
+                                # Delay not yet reached - return no message
+                                lines[lineNum] = f"D={int(delay - timeDiff)}\n"
+                                remainPtr = lineNum
+                            else:
+                                # Delay has been reached - send the next command
+                                if len(lines) >= 1:
+                                    lineNum += 1
+                        else:
+                            # Return the command
+                            command = lines[lineNum]
+                            remainPtr = lineNum + 1
+                if remainPtr != -1 and remainPtr < len(lines):
                     # Write the remaining lines back to the file
-                    f.seek(0)  # Go to the start of the file    
+                    f.seek(0)  # Go to the start of the file
                     f.truncate()  # Clear the file
-                    f.writelines(lines[remainPtr:]) # Write the remaining lines back to the file
+                    f.writelines(
+                        lines[remainPtr:]
+                    )  # Write the remaining lines back to the file
                 else:
                     # No more commands - delete the file
                     remove(POWER_COMMAND_FILE)
@@ -375,11 +380,8 @@ def getPowerControllerCommand():
             msgBytes = getMessageEnvelope(
                 POWER_COMMAND_MSG, bytearray(powerc), sizeof(PowerControlMsg)
             )
-            response = Response(
-                response=msgBytes, mimetype="application/octet-stream"
-            )
+            response = Response(response=msgBytes, mimetype="application/octet-stream")
             # print(f"Power controller: {command}")
-            remainPtr = 1
     return response
 
 
