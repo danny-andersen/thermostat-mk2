@@ -225,6 +225,14 @@ then
     mv command.txt $masterstation
 fi
 
+./dropbox_uploader.sh download relay_command.txt relay_command.txt > /dev/null 2>&1
+if [ -f relay_command.txt ]
+then
+    #Move relay command to controlstation for execution
+    mv relay_command.txt $masterstation
+    ./dropbox_uploader.sh delete relay_command.txt
+fi
+
 ./dropbox_uploader.sh download setTemp.txt setTemp.txt > /dev/null 2>&1
 if [ -f setTemp.txt ]
 then
