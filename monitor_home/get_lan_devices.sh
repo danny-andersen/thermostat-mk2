@@ -229,7 +229,15 @@ fi
 if [ -f relay_command.txt ]
 then
     #Move relay command to controlstation for execution
-    mv relay_command.txt $masterstation
+    if [ -f $masterstation/relay_command.txt ]
+    then
+        #Append to existing file - command has not been executed yet
+        cat relay_command.txt >> $masterstation/relay_command.txt
+        rm relay_command.txt
+    else
+        #Move to controlstation for execution
+        mv relay_command.txt $masterstation
+    fi
     ./dropbox_uploader.sh delete relay_command.txt
 fi
 
