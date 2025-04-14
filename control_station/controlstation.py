@@ -320,7 +320,7 @@ def getPowerControllerCommand():
     # Print out a message to the log if the state is changed.
     # print(f"Power controller: Relay state: {hex(relayStatus)}")
     with open(POWER_STATUS_FILE, "w", encoding="utf-8") as f:
-        f.write(f"{relayStatus}\n")
+        f.write(f"{datetime.now()}@{relayStatus}\n")
     response = getNoMessage()
     if path.exists(POWER_COMMAND_FILE):
         lastModTime = stat(POWER_COMMAND_FILE).st_mtime
