@@ -65,8 +65,15 @@ def airQualitySensor(cfg):
         # Power on BME sensor
         GPIO.output(BME_POWER_GPIO, GPIO.HIGH)
         # Wait for power on
-        sleep(2)
-        bme = BME68X(cnst.BME68X_I2C_ADDR_HIGH, 0)
+        sleep(10)
+        while True:
+            try:
+                bme = BME68X(cnst.BME68X_I2C_ADDR_HIGH, 0)
+                break
+            except Exception as e:
+                print(f"Failed to start Airquality sensor: {e}\n")
+                sleep(5)
+
         bme.set_sample_rate(bsec.BSEC_SAMPLE_RATE_LP)
         bme_state_path = "bme688_state_file"
         if path.isfile(bme_state_path):
@@ -112,7 +119,7 @@ def airQualitySensor(cfg):
         # Lost device or calibration - power down
         print("BME device not responding or lost calibration - restarting")
         GPIO.output(BME_POWER_GPIO, GPIO.LOW)
-        sleep(2)
+        sleep(10)
 
 
 if __name__ == "__main__":
