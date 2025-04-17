@@ -12,7 +12,6 @@ import requests
 sys.path.insert(0, "../masterstation")
 from humidity_sensor import readTemp
 from air_quality_sensor import airQualitySensor
-from co2_sensor import co2Sensor
 
 CHECK_WIFI_SCRIPT = "./check_status.sh"
 
@@ -37,6 +36,7 @@ TEMP_PERIOD = 30  # number of seconds between reading temp + humidty
 TEMP_ONLY = False  # Whether to only read the temperature (DS18B20 device) or both humidity and temp (DHT22)
 AIRQUALITY_MEASURE_PERIOD = 3
 AIRQUALITY_SEND_PERIOD = 30
+
 
 def getTemp(conf, hist: tuple[dict[int, float], dict[int, float]]):
     # Read temp and humidity from sensor and then send them to the masterstation
@@ -219,13 +219,15 @@ if __name__ == "__main__":
     history: tuple[dict[int, float], dict[int, float]] = (dict(), dict())
     sendMessage(cfg, {"reset": True})
     if DEBUG:
-        print(f"Entering loop, reading Temp? {READ_TEMP}, reading Air quality? {READ_AIRQUALITY}\n")
+        print(
+            f"Entering loop, reading Temp? {READ_TEMP}, reading Air quality? {READ_AIRQUALITY}\n"
+        )
     if READ_AIRQUALITY:
-	    #Fork a process to run the air quality and co2 sensor (this is now combined so that it is on the same thread)
+        # Fork a process to run the air quality and co2 sensor (this is now combined so that it is on the same thread)
         processid = fork()
         if processid == 0:
-           airQualitySensor(cfg)
-           exit
+            airQualitySensor(cfg)
+            exit
     while True:
         nowTime = datetime.now().timestamp()
         if READ_TEMP and (nowTime - lastTempTime) > TEMP_PERIOD:
