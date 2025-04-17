@@ -1,12 +1,18 @@
 import RPi.GPIO as GPIO
-from bme68x import BME68X
-import bme68xConstants as cnst
-import bsecConstants as bsec
 from os import path
 from time import sleep
 from datetime import datetime, timedelta
 import requests
 import configparser
+
+from bme68x import BME68X
+import bme68xConstants as cnst
+import bsecConstants as bsec
+
+from scd4x import SCD4X
+
+
+CO2_MEASURE_PERIOD = 30
 
 AIRQUALITY_MEASURE_PERIOD = 2800000  # in microseconds == 2.8 seconds
 AIRQUALITY_SEND_PERIOD = 30
@@ -52,6 +58,25 @@ def sendAirQMessage(conf, data: dict[str, str]):
         print(f"Failed to send message to masterstation {re}\n")
 
 
+# Format = GET /airqual?&a=<alarm status>&delta=<millis since reading taken>&bv=<battery voltage>&t=<temp>&p=<pressure>
+# &h=<humidity&gr=gas_resistance&dac=idac&red=reducing&nh3=NH3&ox=oxidising
+def sendCO2Message(conf, co2):
+    masterstation_url = conf["masterstation_url"]
+    DEBUG = (conf["DEBUG"].lower() == "true") or (conf["DEBUG"].lower() == "yes")
+    url_parts = [f"{masterstation_url}/airqual?"]
+    url_parts.append(f"&co2={co2:.2f}")
+    url = "".join(url_parts)
+    # Send HTTP request with a 3 sec timeout
+    # if DEBUG:
+    #     print(f"Sending status update: {url}\n")
+    try:
+        resp = requests.get(url, timeout=3)
+        # print(f"Received response code {resp.status_code}")
+    except requests.exceptions.RequestException as re:
+        print(f"Failed to send message to masterstation {re}\n")
+
+
+
 def airQualitySensor(cfg):
     GPIO.setmode(GPIO.BCM)
     BME_POWER_GPIO = 17
@@ -59,20 +84,30 @@ def airQualitySensor(cfg):
     # Make sure sensor has been powered down
     GPIO.output(BME_POWER_GPIO, GPIO.LOW)
     sleep(2)
+    lastStateDate = datetime.now()
     while True:
         # Outer loop allows sensor device to be restarted if calibration is lost
         DEBUG = (cfg["DEBUG"].lower() == "true") or (cfg["DEBUG"].lower() == "yes")
         # Power on BME sensor
         GPIO.output(BME_POWER_GPIO, GPIO.HIGH)
         # Wait for power on
-        sleep(10)
-        while True:
+        sleep(30)
+        bmeUp = False
+        scd4xUp = False
+        while not bmeUp or not scd4xUp:
             try:
                 bme = BME68X(cnst.BME68X_I2C_ADDR_HIGH, 0)
-                break
+                bmeUp = True
             except Exception as e:
                 print(f"Failed to start Airquality sensor: {e}\n")
-                sleep(5)
+                sleep(15)
+            try:
+                device = SCD4X(quiet=True if DEBUG else False)
+                device.start_periodic_measurement()
+                scd4xUp = True
+            except Exception as e:
+                print(f"Failed to initialise SC4X C02 sensor {e}\n")
+                sleep(15)
 
         bme.set_sample_rate(bsec.BSEC_SAMPLE_RATE_LP)
         bme_state_path = "bme688_state_file"
@@ -83,20 +118,22 @@ def airQualitySensor(cfg):
                 conf_list = conf_str.split(",")
                 conf_int = [int(x) for x in conf_list]
                 bme.set_bsec_state(conf_int)
-        lastStateDate = datetime.now()
         lastSendTime = 0
+        lastCO2Time = 0
         calibrated = False
+        co2FailCount = 0
 
         while True:
             bsec_data = get_data(bme)
             while bsec_data == None:
                 bsec_data = get_data(bme)
             dt = datetime.now()
-            if bsec_data["iaq_accuracy"] == 3:
-                calibrated = True
             if calibrated and bsec_data["iaq_accuracy"] < 2:
                 # Calibration has been lost - restart sensor
+                print("BME Calibration lost - restarting sensor\n")
                 break
+            if bsec_data["iaq_accuracy"] == 3:
+                calibrated = True
             if DEBUG:
                 print(bsec_data)
 
@@ -111,15 +148,42 @@ def airQualitySensor(cfg):
                     state_file.close()
                     lastStateDate = dt
 
+            if (dt.timestamp() - lastCO2Time) >= CO2_MEASURE_PERIOD:
+                try:
+                    co2, temperature, relative_humidity, timestamp = device.measure()
+                    co2FailCount = 0
+                    sendCO2Message(cfg, co2)
+                    lastCO2Time = dt.timestamp()
+                    if DEBUG:
+                        print(
+                            f"""Time: {dt.strftime("%Y/%m/%d %H:%M:%S:%f %Z %z")}, CO2: {co2:.2f} PPM, Temperature: {temperature:.4f}c, Humidity: {relative_humidity:.2f}%RH"""
+                        )
+                except Exception as e:
+                    print(f"Failed to read CO2 sensor: {e}\n")
+                    co2FailCount += 1
+                    if co2FailCount > 5:
+                        print("CO2 sensor not responding - restarting device\n")
+                        scd4xUp = False
+
+            if not scd4xUp:
+                try:
+                    device = SCD4X(quiet=True if DEBUG else False)
+                    device.start_periodic_measurement()
+                    co2FailCount = 0
+                    scd4xUp = True
+                except Exception as e:
+                    print(f"Failed to initialise SCD4X C02 sensor {e}\n")
+
             st = datetime.now()
             execTime = (st - dt).microseconds
             sleepTime = AIRQUALITY_MEASURE_PERIOD - execTime
             if sleepTime > 0:
                 sleep(sleepTime / 1000000.0)
+                
         # Lost device or calibration - power down
         print("BME device not responding or lost calibration - restarting")
         GPIO.output(BME_POWER_GPIO, GPIO.LOW)
-        sleep(10)
+        sleep(30)
 
 
 if __name__ == "__main__":
@@ -129,3 +193,5 @@ if __name__ == "__main__":
     cfg["DEBUG"] = "True"
 
     airQualitySensor(cfg)
+
+

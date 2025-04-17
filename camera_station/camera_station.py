@@ -221,14 +221,10 @@ if __name__ == "__main__":
     if DEBUG:
         print(f"Entering loop, reading Temp? {READ_TEMP}, reading Air quality? {READ_AIRQUALITY}\n")
     if READ_AIRQUALITY:
-	    #Fork a process to run the air quality sensor
+	    #Fork a process to run the air quality and co2 sensor (this is now combined so that it is on the same thread)
         processid = fork()
         if processid == 0:
            airQualitySensor(cfg)
-           exit
-        processid = fork()
-        if processid == 0:
-           co2Sensor(cfg)
            exit
     while True:
         nowTime = datetime.now().timestamp()
