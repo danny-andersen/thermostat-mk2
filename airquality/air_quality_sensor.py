@@ -76,7 +76,6 @@ def sendCO2Message(conf, co2):
         print(f"Failed to send message to masterstation {re}\n")
 
 
-
 def airQualitySensor(cfg):
     GPIO.setmode(GPIO.BCM)
     BME_POWER_GPIO = 17
@@ -125,10 +124,10 @@ def airQualitySensor(cfg):
 
         while True:
             bsec_data = get_data(bme)
-            while bsec_data == None:
+            while bsec_data is None:
                 bsec_data = get_data(bme)
             dt = datetime.now()
-            if calibrated and bsec_data["iaq_accuracy"] < 2:
+            if calibrated and bsec_data["iaq_accuracy"] == 0:
                 # Calibration has been lost - restart sensor
                 print("BME Calibration lost - restarting sensor\n")
                 break
@@ -142,7 +141,7 @@ def airQualitySensor(cfg):
                 lastSendTime = dt.timestamp()
             # Save state every 24 hours
             timeSinceLastSave = dt - lastStateDate
-            if timeSinceLastSave > timedelta(hours=24):
+            if calibrated and timeSinceLastSave > timedelta(hours=24):
                 with open(bme_state_path, "w") as state_file:
                     state_file.write(str(bme.get_bsec_state()))
                     state_file.close()
@@ -152,8 +151,10 @@ def airQualitySensor(cfg):
                 try:
                     co2, temperature, relative_humidity, timestamp = device.measure()
                     co2FailCount = 0
-                    sendCO2Message(cfg, co2)
-                    lastCO2Time = dt.timestamp()
+                    if co2 > 420:
+                        # Only send valid values, i.e. greater than ambient CO2 levels - initial power up of sensor has low readings
+                        sendCO2Message(cfg, co2)
+                        lastCO2Time = dt.timestamp()
                     if DEBUG:
                         print(
                             f"""Time: {dt.strftime("%Y/%m/%d %H:%M:%S:%f %Z %z")}, CO2: {co2:.2f} PPM, Temperature: {temperature:.4f}c, Humidity: {relative_humidity:.2f}%RH"""
@@ -179,7 +180,7 @@ def airQualitySensor(cfg):
             sleepTime = AIRQUALITY_MEASURE_PERIOD - execTime
             if sleepTime > 0:
                 sleep(sleepTime / 1000000.0)
-                
+
         # Lost device or calibration - power down
         print("BME device not responding or lost calibration - restarting")
         GPIO.output(BME_POWER_GPIO, GPIO.LOW)
@@ -193,5 +194,3 @@ if __name__ == "__main__":
     cfg["DEBUG"] = "True"
 
     airQualitySensor(cfg)
-
-
