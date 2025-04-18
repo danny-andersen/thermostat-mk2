@@ -23,7 +23,7 @@ def get_data(sensor):
     try:
         data = sensor.get_bsec_data()
     except Exception as e:
-        print(e)
+        print(f"Failed to read IAQ BME sensor {e}")
         return None
     if data == None or data == {}:
         # Sensor not ready for next measurement - wait a bit
@@ -143,9 +143,13 @@ def airQualitySensor(cfg):
             timeSinceLastSave = dt - lastStateDate
             if calibrated and timeSinceLastSave > timedelta(hours=24):
                 with open(bme_state_path, "w") as state_file:
-                    state_file.write(str(bme.get_bsec_state()))
+                    try:
+                        state_file.write(str(bme.get_bsec_state()))
+                        lastStateDate = dt
+                    except Exception as e:
+                        print(f"Failed to retrieve IAQ BME sensor data: {e}")
+                        break
                     state_file.close()
-                    lastStateDate = dt
 
             if (dt.timestamp() - lastCO2Time) >= CO2_MEASURE_PERIOD:
                 try:
