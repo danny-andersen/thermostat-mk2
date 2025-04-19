@@ -152,33 +152,36 @@ def airQualitySensor(cfg):
                     state_file.close()
 
             if (dt.timestamp() - lastCO2Time) >= CO2_MEASURE_PERIOD:
-                try:
-                    co2, temperature, relative_humidity, timestamp = device.measure()
-                    co2FailCount = 0
-                    if co2 > 420:
-                        # Only send valid values, i.e. greater than ambient CO2 levels - initial power up of sensor has low readings
-                        sendCO2Message(cfg, co2)
+                if (scd4xUp):
+                    try:
+                        co2, temperature, relative_humidity, timestamp = device.measure()
                         lastCO2Time = dt.timestamp()
-                    if DEBUG:
-                        print(
-                            f"""Time: {dt.strftime("%Y/%m/%d %H:%M:%S:%f %Z %z")}, CO2: {co2:.2f} PPM, Temperature: {temperature:.4f}c, Humidity: {relative_humidity:.2f}%RH"""
-                        )
-                except Exception as e:
-                    print(f"Failed to read CO2 sensor: {e}\n")
-                    co2FailCount += 1
-                    if co2FailCount > 5:
-                        print("CO2 sensor not responding - restarting device\n")
+                        co2FailCount = 0
+                        if co2 > 420:
+                            # Only send valid values, i.e. greater than ambient CO2 levels - initial power up of sensor has low readings
+                            sendCO2Message(cfg, co2)
+                        if DEBUG:
+                            print(
+                                f"""Time: {dt.strftime("%Y/%m/%d %H:%M:%S:%f %Z %z")}, CO2: {co2:.2f} PPM, Temperature: {temperature:.4f}c, Humidity: {relative_humidity:.2f}%RH"""
+                            )
+                    except Exception as e:
+                        print(f"Failed to read CO2 sensor: {e}\n")
+                        co2FailCount += 1
+                        if co2FailCount > 10:
+                            print("CO2 sensor not responding - restarting device\n")
+                            scd4xUp = False
+                else:
+                    # Attempt to restart CO2 sensor
+                    try:
+                        device = SCD4X(quiet=True if DEBUG else False)
+                        device.start_periodic_measurement()
+                        co2FailCount = 0
+                        scd4xUp = True
+                    except Exception as e:
+                        print(f"Failed to initialise SCD4X C02 sensor {e}\n")
                         scd4xUp = False
 
-            if not scd4xUp:
-                try:
-                    device = SCD4X(quiet=True if DEBUG else False)
-                    device.start_periodic_measurement()
-                    co2FailCount = 0
-                    scd4xUp = True
-                except Exception as e:
-                    print(f"Failed to initialise SCD4X C02 sensor {e}\n")
-
+            # Sleep for the remainder of the measure period    
             st = datetime.now()
             execTime = (st - dt).microseconds
             sleepTime = AIRQUALITY_MEASURE_PERIOD - execTime
