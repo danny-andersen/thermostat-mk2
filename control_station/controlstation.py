@@ -277,7 +277,7 @@ def getAirQuality():
         sc.lastGasTime = datetime.now().timestamp()
         sc.batteryV = bv
 
-    elif iaq:
+    elif iaq != None:
         airquality_fn = "airquality.csv"
         file_exists = path.isfile(airquality_fn)
         with open(airquality_fn, "a") as file:
@@ -291,7 +291,7 @@ def getAirQuality():
         sc.airq_accuracy = accuracy
         sc.voc = voc
         sc.lastQtime = datetime.now().timestamp()
-    elif co2:
+    elif co2 != None and co2 != 400:
         co2_fn = "co2_sensor.csv"
         file_exists = path.isfile(co2_fn)
         with open(co2_fn, "a") as file:

@@ -3,12 +3,12 @@ from datetime import datetime, timedelta
 import requests
 import configparser
 
-from datetime import datetime, timezone
+from sensirion_i2c_driver import LinuxI2cTransceiver, I2cConnection, CrcCalculator
+from sensirion_driver_adapters.i2c_adapter.i2c_channel import I2cChannel
+from sensirion_i2c_scd4x.device import Scd4xDevice
 
-from scd4x import SCD4X
 
-
-CO2_MEASURE_PERIOD = 30 * 1000000  # in microseconds == 30 seconds
+CO2_MEASURE_PERIOD = 30  # in microseconds == 30 seconds
 
 
 # Format = GET /airqual?&a=<alarm status>&delta=<millis since reading taken>&bv=<battery voltage>&t=<temp>&p=<pressure>
@@ -17,7 +17,7 @@ def sendCO2Message(conf, co2):
     masterstation_url = conf["masterstation_url"]
     DEBUG = (conf["DEBUG"].lower() == "true") or (conf["DEBUG"].lower() == "yes")
     url_parts = [f"{masterstation_url}/airqual?"]
-    url_parts.append(f"&co2={co2:.2f}")
+    url_parts.append(f"&co2={co2}")
     url = "".join(url_parts)
     # Send HTTP request with a 3 sec timeout
     # if DEBUG:
@@ -32,34 +32,61 @@ def sendCO2Message(conf, co2):
 def co2Sensor(cfg):
     DEBUG = (cfg["DEBUG"].lower() == "true") or (cfg["DEBUG"].lower() == "yes")
     while True:
-        # Let everything start up
-        sleep(30)
-        try:
-            device = SCD4X(quiet=True if DEBUG else False)
-            device.start_periodic_measurement()
+        # Use the software I2C bus (GPIO pins 23 + 24), which comes out as i2c-3
+        # Need to add dtoverlay=i2c-gpio,bus=3 to config.txt to enable this
+        with LinuxI2cTransceiver('/dev/i2c-3') as i2c_transceiver:
+            channel = I2cChannel(I2cConnection(i2c_transceiver),
+                                slave_address=0x62,
+                                crc=CrcCalculator(8, 0x31, 0xff, 0x0))
+            sensor = Scd4xDevice(channel)
+            sleep(0.03)
+
+            # Ensure sensor is in clean state
+            sensor.wake_up()
+            sensor.stop_periodic_measurement()
+            sensor.reinit()
+
+            # Read out information about the sensor
+            serial_number = sensor.get_serial_number()
+            print(f"serial number: {serial_number}"
+                )
+
+            # Start periodic measurements (5sec interval)
+            sensor.start_periodic_measurement()
+            
+            sendTime = datetime.now() - timedelta(seconds = 30)
+
             while True:
                 try:
-                    co2, temperature, relative_humidity, timestamp = device.measure()
+                    data_ready = sensor.get_data_ready_status()
+                    while not data_ready:
+                        sleep(0.1)
+                        data_ready = sensor.get_data_ready_status()
+
+            #     If ambient pressure compenstation during measurement
+            #     is required, you should call the respective functions here.
+            #     Check out the header file for the function definition.
+                    (co2, temperature, relative_humidity
+                                ) = sensor.read_measurement()
                 except Exception as e:
                     print(f"Failed to measure CO2 sensor: {e}")
                     break
-                dt = datetime.now()
+                now = datetime.now()
                 if DEBUG:
-                    print(
-                        f"""
-        Time:        {dt.strftime("%Y/%m/%d %H:%M:%S:%f %Z %z")}
-        CO2:         {co2:.2f}PPM
-        Temperature: {temperature:.4f}c
-        Humidity:    {relative_humidity:.2f}%RH"""
-                    )
-                sendCO2Message(cfg, co2)
-                st = datetime.now()
-                execTime = (st - dt).microseconds
-                sleepTime = CO2_MEASURE_PERIOD - execTime
-                if sleepTime > 0:
-                    sleep(sleepTime / 1000000.0)
-        except Exception as e:
-            print(f"Failed to initialise SC4X C02 sensor {e}, restarting")
+                    print(f"CO2 concentration [ppm]: {co2}"
+                        )
+                    print(f"Temperature [°C]: {temperature}"
+                        )
+                    print(f"Relative Humidity [RH]: {relative_humidity}"
+                        )
+                if co2 != 400:
+                    #Valid value
+                    if (now - sendTime).seconds >= CO2_MEASURE_PERIOD: 
+                        sendCO2Message(cfg, co2)
+                        sendTime = datetime.now()
+                else:
+                    print(f"CO2 reading returned: {co2}")
+                sleep(5)
 
 
 if __name__ == "__main__":
@@ -69,3 +96,4 @@ if __name__ == "__main__":
     cfg["DEBUG"] = "True"
 
     co2Sensor(cfg)
+

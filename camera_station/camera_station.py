@@ -12,6 +12,7 @@ import requests
 sys.path.insert(0, "../masterstation")
 from humidity_sensor import readTemp
 from air_quality_sensor import airQualitySensor
+from co2_sensor import co2Sensor
 
 CHECK_WIFI_SCRIPT = "./check_status.sh"
 
@@ -228,6 +229,10 @@ if __name__ == "__main__":
         if processid == 0:
             airQualitySensor(cfg)
             exit
+        processid = fork()
+        if processid == 0:
+           co2Sensor(cfg)
+           exit
     while True:
         nowTime = datetime.now().timestamp()
         if READ_TEMP and (nowTime - lastTempTime) > TEMP_PERIOD:
