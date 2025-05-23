@@ -4,6 +4,7 @@ import requests
 import configparser
 
 from sensirion_i2c_driver import LinuxI2cTransceiver, I2cConnection, CrcCalculator
+from sensirion_i2c_driver.errors import I2cError
 from sensirion_driver_adapters.i2c_adapter.i2c_channel import I2cChannel
 from sensirion_i2c_scd4x.device import Scd4xDevice
 
@@ -42,9 +43,14 @@ def co2Sensor(cfg):
             sleep(0.03)
 
             # Ensure sensor is in clean state
-            sensor.wake_up()
-            sensor.stop_periodic_measurement()
-            sensor.reinit()
+            try:
+                sensor.wake_up()
+                sensor.stop_periodic_measurement()
+                sensor.reinit()
+            except I2cError as er:
+                print(f"Failed to initialize CO2 sensor (retrying in 30): {er}")
+                sleep(30)
+                break
 
             # Read out information about the sensor
             serial_number = sensor.get_serial_number()
@@ -52,7 +58,7 @@ def co2Sensor(cfg):
                 )
 
             # Start periodic measurements (5sec interval)
-            sensor.start_periodic_measurement()
+            sensor.start_periodic_measurement(0)
             
             sendTime = datetime.now() - timedelta(seconds = 30)
 
@@ -68,25 +74,35 @@ def co2Sensor(cfg):
             #     Check out the header file for the function definition.
                     (co2, temperature, relative_humidity
                                 ) = sensor.read_measurement()
+                    now = datetime.now()
+                    if DEBUG:
+                        print(f"CO2 concentration [ppm]: {co2}"
+                            )
+                        print(f"Temperature [°C]: {temperature}"
+                            )
+                        print(f"Relative Humidity [RH]: {relative_humidity}"
+                            )
+                    if co2 != 400:
+                        #Valid value
+                        if (now - sendTime).seconds >= CO2_MEASURE_PERIOD: 
+                            sendCO2Message(cfg, co2)
+                            sendTime = datetime.now()
                 except Exception as e:
-                    print(f"Failed to measure CO2 sensor: {e}")
-                    break
-                now = datetime.now()
-                if DEBUG:
-                    print(f"CO2 concentration [ppm]: {co2}"
-                        )
-                    print(f"Temperature [°C]: {temperature}"
-                        )
-                    print(f"Relative Humidity [RH]: {relative_humidity}"
-                        )
-                if co2 != 400:
-                    #Valid value
-                    if (now - sendTime).seconds >= CO2_MEASURE_PERIOD: 
-                        sendCO2Message(cfg, co2)
-                        sendTime = datetime.now()
-                else:
-                    print(f"CO2 reading returned: {co2}")
-                sleep(5)
+                    print(f"Reading CO2: Failed to measure CO2 sensor: {e}")
+                    sensor.stop_periodic_measurement()
+                    sensor.reinit()
+                    sensor.start_periodic_measurement(0)
+                except I2cError as er:
+                    print(f"Reading CO2: I2C error: {er}")
+                    sensor.stop_periodic_measurement()
+                    sensor.reinit()
+                    sensor.start_periodic_measurement(0)
+                except IOError as ie:
+                    print(f"Reading CO2: IO error: {ie}")
+                    sensor.stop_periodic_measurement()
+                    sensor.reinit()
+                    sensor.start_periodic_measurement(0)
+                sleep(30)
 
 
 if __name__ == "__main__":
