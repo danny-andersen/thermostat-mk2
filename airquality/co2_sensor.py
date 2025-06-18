@@ -58,7 +58,7 @@ def co2Sensor(cfg):
                 )
 
             # Start periodic measurements (5sec interval)
-            sensor.start_periodic_measurement(0)
+            sensor.start_periodic_measurement()
             
             sendTime = datetime.now() - timedelta(seconds = 30)
 
