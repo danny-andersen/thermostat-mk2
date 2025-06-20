@@ -28,6 +28,9 @@ def sendCO2Message(conf, co2):
         # print(f"Received response code {resp.status_code}")
     except requests.exceptions.RequestException as re:
         print(f"Failed to send message to masterstation {re}\n")
+    # touch a file to indicate that the CO2 sensor is running
+    with open("co2_sensor_running.txt", "w") as f:
+        f.write(f"CO2 sensor running at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
 
 def co2Sensor(cfg):

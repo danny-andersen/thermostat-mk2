@@ -1,4 +1,5 @@
 import sys
+import os
 
 import configparser
 import subprocess
@@ -233,6 +234,24 @@ if __name__ == "__main__":
         if processid == 0:
            co2Sensor(cfg)
            exit
+        processid = fork()
+        if processid == 0:
+            # Monitor thread
+            # Monitor the co2 sensor file and if not upated within the last 5 minutes, restart the sensor
+            while True:
+                nowTime = datetime.now().timestamp()
+                # Check if the air quality file has been updated in the last 5 minutes
+                if path.exists("co2_sensor_running.txt"):
+                    lastUpdateTime = os.path.getmtime("co2_sensor_running.txt")
+                    if (nowTime - lastUpdateTime) > 300:
+                        print(
+                            "CO2 sensor not updated in the last 5 minutes, restarting..."
+                        )
+                        processid = fork()
+                        if processid == 0:
+                            co2Sensor(cfg)
+                            exit
+                sleep(60)
     while True:
         nowTime = datetime.now().timestamp()
         if READ_TEMP and (nowTime - lastTempTime) > TEMP_PERIOD:
