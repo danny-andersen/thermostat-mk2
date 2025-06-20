@@ -65,9 +65,20 @@ def co2Sensor(cfg):
             while True:
                 try:
                     data_ready = sensor.get_data_ready_status()
+                    startWait = datetime.now()
                     while not data_ready:
-                        sleep(0.1)
                         data_ready = sensor.get_data_ready_status()
+                        if (datetime.now() - startWait).seconds >= CO2_MEASURE_PERIOD: 
+                            # If we have not received a measurement in the last 30 seconds, reinitialize the sensor
+                            print("CO2 sensor did not return data in time, reinitializing...")  
+                            sensor.wake_up()
+                            sensor.stop_periodic_measurement()
+                            sensor.reinit()
+                            sensor.start_periodic_measurement(0)                            
+                            startWait = datetime.now()
+                            sleep(5)
+                        else:
+                            sleep(0.5)
 
             #     If ambient pressure compenstation during measurement
             #     is required, you should call the respective functions here.
@@ -89,20 +100,23 @@ def co2Sensor(cfg):
                             sendTime = datetime.now()
                 except Exception as e:
                     print(f"Reading CO2: Failed to measure CO2 sensor: {e}")
+                    sensor.wake_up()
                     sensor.stop_periodic_measurement()
                     sensor.reinit()
                     sensor.start_periodic_measurement(0)
                 except I2cError as er:
                     print(f"Reading CO2: I2C error: {er}")
+                    sensor.wake_up()
                     sensor.stop_periodic_measurement()
                     sensor.reinit()
                     sensor.start_periodic_measurement(0)
                 except IOError as ie:
                     print(f"Reading CO2: IO error: {ie}")
+                    sensor.wake_up()
                     sensor.stop_periodic_measurement()
                     sensor.reinit()
                     sensor.start_periodic_measurement(0)
-                sleep(30)
+                sleep(5)
 
 
 if __name__ == "__main__":
