@@ -15,7 +15,7 @@ BOOT_EPOCH=$(date -d "$BOOT_TIME" +%s)
 CURRENT_YEAR=$(date +%Y)
 
 # Search the log file for lines containing the message
-grep -F "$WATCHDOG_MSG" "$LOG_FILE" | while read -r line; do
+grep -aF "$WATCHDOG_MSG" "$LOG_FILE" | while read -r line; do
     # Extract the 4th bracketed field (timestamp)
     RAW_TIMESTAMP=$(echo "$line" | grep -oP '(\[[^]]*\])' | sed -n '4p' | tr -d '[]')
 
