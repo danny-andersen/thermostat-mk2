@@ -164,6 +164,13 @@ then
 	./dropbox_uploader.sh upload 6_status.txt 6_status.txt > /dev/null 2>&1
 fi
 
+diff -q ${masterstation}/7_status.txt 7_status.txt >/dev/null
+if [ $? -eq 1 ]
+then
+	cp ${masterstation}/7_status.txt 7_status.txt
+	./dropbox_uploader.sh upload 7_status.txt 7_status.txt > /dev/null 2>&1
+fi
+
 if [ ! -f ${airquality_file} ]
 then
     # Restart file every day
