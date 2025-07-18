@@ -4,7 +4,7 @@
 LOG_FILE="/home/danny/camera_with_switch/motion.log"
 
 # Watchdog message to search for
-WATCHDOG_MSG="Watchdog timeout"
+WATCHDOG_MSG="Watchdog timeout did NOT restart"
 
 # Get the system boot time in epoch
 #BOOT_TIME=$(who -b | awk '{print $3 " " $4}')
