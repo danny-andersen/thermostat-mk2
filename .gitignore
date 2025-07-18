@@ -182,3 +182,7 @@ camera_with_switch/motion.key
 camera_with_switch/motion.p12
 camera_with_switch/*.pgm
 camera_with_switch/camera_switch.ini
+control_station/met-office-api-key.txt
+control_station/hourly-sample.json
+control_station/hourly-sample-middlewich.json
+control_station/test/*

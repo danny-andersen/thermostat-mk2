@@ -8,7 +8,7 @@ if __name__ == "__main__":
 		sys.exit(1)
 	html = BeautifulSoup(open(sys.argv[1]).read(), "lxml")
 	# Find sunrise
-	sunrise = html.find('th', text="Sunrise today")
+	sunrise = html.find('th', string="Sunrise today")
 	sunriseTime = ''
 	if sunrise != None:
 		sunriseRow = sunrise.parent
@@ -16,7 +16,7 @@ if __name__ == "__main__":
 		if sunriseTimeCell != None:
 			sunriseTime = sunriseTimeCell.text.strip()
 
-	sunset = html.find('th', text="Sunset today")
+	sunset = html.find('th', string="Sunset today")
 	sunsetTime = ''
 	if sunset != None:
 		sunsetRow = sunset.parent

@@ -7,6 +7,11 @@
 #Met Office
 wget -O suntimes.xml "https://www.sunrise-and-sunset.com/en/sun/united-kingdom/middlewich"
 python parse_sunrise_sunset.py suntimes.xml
-wget -O met-forecast.xml "http://datapoint.metoffice.gov.uk/public/data/val/wxfcs/all/xml/352627?res=3hourly&key=5b71c02f-a1fd-4a43-9d15-cf3315d75ba9"
-python parse_met_office.py met-forecast.xml
+#wget -O met-forecast.xml "http://datapoint.metoffice.gov.uk/public/data/val/wxfcs/all/xml/352627?res=3hourly&key=5b71c02f-a1fd-4a43-9d15-cf3315d75ba9"
+curl -X GET "https://data.hub.api.metoffice.gov.uk/sitespecific/v0/point/hourly?includeLocationName=true&latitude=53.195&longitude=-2.438" \
+ -H "accept: application/json"\
+ -H @met-office-api-key.txt \
+    -o met-forecast.json -s
+
+python parse_met_office.py met-forecast.json
 
