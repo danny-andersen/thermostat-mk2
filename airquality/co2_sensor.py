@@ -42,7 +42,13 @@ def co2Sensor(cfg):
             channel = I2cChannel(I2cConnection(i2c_transceiver),
                                 slave_address=0x62,
                                 crc=CrcCalculator(8, 0x31, 0xff, 0x0))
-            sensor = Scd4xDevice(channel)
+            try:
+                sensor = Scd4xDevice(channel)
+            except (I2cError, IOError) as e:
+                print(f"Failed to initialize CO2 sensor (retrying in 30): {e}")
+                sleep(30)
+                continue
+            
             sleep(0.03)
 
             # Ensure sensor is in clean state
@@ -53,7 +59,7 @@ def co2Sensor(cfg):
             except I2cError as er:
                 print(f"Failed to initialize CO2 sensor (retrying in 30): {er}")
                 sleep(30)
-                break
+                continue
 
             # Read out information about the sensor
             serial_number = sensor.get_serial_number()
