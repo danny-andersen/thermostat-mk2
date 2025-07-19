@@ -99,7 +99,7 @@ for entry in sorted_time_series:
         nowWeather = int(forecast["significantWeatherCode"])
         forecastDate = datetime.strptime(forecast["time"], "%Y-%m-%dT%H:%MZ").replace(tzinfo=utc).astimezone(local_tz)
         raining = int(forecast["probOfPrecipitation"]) > rainThreshold
-        rainProb = int(forecast["probOfPrecipitation"]) < rainIfOver
+        rainProb = int(forecast["probOfPrecipitation"])
         break
 
 nextForecast = None
