@@ -287,13 +287,12 @@ then
 fi
 
 #Update weather every 30mins
-istime=$((10#$mins % 30))
-if ! [ -f $masterstation/motd.txt ] || [ $istime -eq 0 ] 
+if [ ! -f $masterstation/motd.txt ] || [ $mins -eq 0 ] || [ $mins -eq 30 ]
 then
-    #motd timed out - get a new one
-   cd ${masterstation}
-   ./getWeather.sh > /dev/null 2>&1
-   cd -
+    #Get weather
+    cd ${masterstation}
+    ./getWeather.sh > /dev/null 2>&1
+    cd -
 fi
 
 
