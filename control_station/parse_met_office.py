@@ -43,6 +43,17 @@ weatherText = dict(
     ]
 )
 
+def getWeatherCode(code):
+    if code == 3: code = 2
+    if code == 10: code = 9
+    if code == 14: code = 13
+    if code == 17: code = 16
+    if code == 20: code = 19
+    if code == 23: code = 22
+    if code == 26: code = 25
+    if code == 29: code = 28
+    return code
+    
 rainThreshold = 25  # Report rain >25%
 rainIfOver = 9
 
@@ -96,16 +107,18 @@ for entry in sorted_time_series:
     if now - entry_time < timedelta(hours=1):
         # Found the current hourly forecast
         forecast = entry
-        nowWeather = int(forecast["significantWeatherCode"])
+        nowWeather = getWeatherCode(int(forecast["significantWeatherCode"]))
         forecastDate = datetime.strptime(forecast["time"], "%Y-%m-%dT%H:%MZ").replace(tzinfo=utc).astimezone(local_tz)
         raining = int(forecast["probOfPrecipitation"]) > rainThreshold
         rainProb = int(forecast["probOfPrecipitation"])
+        forecastTime = entry_time
         break
 
 nextForecast = None
 nextWeather = -1
 nextTemp = -255
 nextTimeHour = -1
+nextRainProp = 0
 
 # Get next weather
 for entry in sorted_time_series:
@@ -115,10 +128,11 @@ for entry in sorted_time_series:
         if nextTemp == -255:
             nextTemp = float(entry["screenTemperature"])
             # print(f"Next temp: {nextTemp} at {entry_time}")
-        entryWeather = int(entry["significantWeatherCode"])
+        entryWeather = getWeatherCode(entry["significantWeatherCode"])
         if (entryWeather != nowWeather):    
             nextForecast = entry
             nextWeather = entryWeather
+            nextRainProp = int(entry["probOfPrecipitation"])
             nextTimeHour = entry_time.hour
             break
 
@@ -189,23 +203,20 @@ wind += f" {dirn}"
 rainStr = ""
 if rainProb > rainThreshold or nowWeather >= rainIfOver:
     rainStr = f" ({rainProb}%)"
+nextRainStr = ""
+if nextRainProp > rainThreshold or nextWeather >= rainIfOver:
+    nextRainStr = f" ({nextRainProp}%)"
 if nextTimeHour >= 0:
-    forecastText = f"{weatherText[nowWeather]}{rainStr} until {nextTimeHour :.0f}00 and then {weatherText[nextWeather]}"
+    forecastText = f"{weatherText[nowWeather]}{rainStr} until {nextTimeHour :.0f}00 and then {weatherText[nextWeather]}{nextRainStr}"
 else:
-    forecastText = f"{weatherText[nowWeather]}{rainStr} all day!"
+    forecastText = f"{weatherText[nowWeather]}{rainStr} all {'day' if forecastTime.hour < 18 else 'night'}!"
 
 # Currently not raining (probably) but rain is expected
-if rainProb <= rainThreshold and precipTime != None:
-    forecastText += ". Rain (%s%%) at %0d00" % (
-        precipPercent,
+if rainProb <= rainThreshold and precipTime != None and nextRainStr == "":
+    forecastText += ". Rain at %0d00 (%s%%)" % (
         precipTime.hour,
+        precipPercent,
     )
-elif nextForecast != None:
-    rainProb = int(nextForecast["probOfPrecipitation"])
-    rainStr = ""
-    if rainProb > rainThreshold or nextWeather >= rainIfOver:
-        rainStr = f" ({rainProb}%)"
-forecastText += rainStr
 
 # Read in sunrise + sunset times
 with open("suntimes.txt", "r") as f:
