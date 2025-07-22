@@ -76,7 +76,7 @@ def airQualitySensor(cfg):
                 bme = BME68X(cnst.BME68X_I2C_ADDR_HIGH, 0)
                 bmeUp = True
             except Exception as e:
-                print(f"Failed to start Airquality sensor: {e}\n")
+                print(f"{datetime.now()} Failed to start Airquality sensor: {e}\n")
                 sleep(15)
 
         bme.set_sample_rate(bsec.BSEC_SAMPLE_RATE_LP)
@@ -92,14 +92,18 @@ def airQualitySensor(cfg):
         calibrated = False
 
         while True:
-            bsec_data = get_data(bme)
-            while bsec_data is None:
-                bsec_data = get_data(bme)
             dt = datetime.now()
-            if calibrated and bsec_data["iaq_accuracy"] == 0:
-                # Calibration has been lost - restart sensor
-                print("BME Calibration lost - restarting sensor\n")
+            try:
+                bsec_data = get_data(bme)
+                while bsec_data is None:
+                    bsec_data = get_data(bme)
+            except (Exception, IOError) as e:
+                print(f"{dt} Failed to retrieve IAQ BME sensor data: {e} - restarting sensor")
                 break
+            # if calibrated and bsec_data["iaq_accuracy"] == 0:
+            #     # Calibration has been lost - restart sensor
+            #     print("BME Calibration lost - restarting sensor\n")
+            #     break
             if bsec_data["iaq_accuracy"] == 3:
                 calibrated = True
             if DEBUG:
@@ -113,12 +117,12 @@ def airQualitySensor(cfg):
             if calibrated and timeSinceLastSave > timedelta(hours=24):
                 with open(bme_state_path, "w") as state_file:
                     try:
-                        state_file.write(str(bme.get_bsec_state()))
+                        state = str(bme.get_bsec_state())
+                        state_file.write(state)
                         lastStateDate = dt
+                        state_file.close()
                     except Exception as e:
-                        print(f"Failed to retrieve IAQ BME sensor data: {e}")
-                        break
-                    state_file.close()
+                        print(f"{dt} Failed to retrieve BME state data: {e}, continuing")
 
             # Sleep for the remainder of the measure period    
             st = datetime.now()
@@ -128,7 +132,7 @@ def airQualitySensor(cfg):
                 sleep(sleepTime / 1000000.0)
 
         # Lost device or calibration - power down
-        print("BME device not responding or lost calibration - restarting")
+        print(f"{datetime.now()} BME device not responding or lost calibration - restarting")
         GPIO.output(BME_POWER_GPIO, GPIO.LOW)
         sleep(30)
 

@@ -45,7 +45,7 @@ def co2Sensor(cfg):
             try:
                 sensor = Scd4xDevice(channel)
             except (I2cError, IOError) as e:
-                print(f"Failed to initialize CO2 sensor (retrying in 30): {e}")
+                print(f"Failed to create CO2 sensor (retrying in 30): {e}")
                 sleep(30)
                 continue
             
@@ -56,7 +56,7 @@ def co2Sensor(cfg):
                 sensor.wake_up()
                 sensor.stop_periodic_measurement()
                 sensor.reinit()
-            except I2cError as er:
+            except (I2cError, IOError) as er:
                 print(f"Failed to initialize CO2 sensor (retrying in 30): {er}")
                 sleep(30)
                 continue
