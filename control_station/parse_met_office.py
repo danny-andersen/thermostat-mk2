@@ -232,8 +232,8 @@ if sunrise != "" and sunset != "":
     elif setDelta <= 2:
         forecastText = "Sunset at %s, %s" % (sunset, forecastText)
 
-# Expire forecast after two hours
-expiry = 2 * 3600 * 1000
+# Expire forecast after one hour
+expiry = 1 * 3600 * 1000
 
 # print (f"Date: {forecastDate} Forecast: {forecastText}")
 # print (wind, temp)
