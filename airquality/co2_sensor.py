@@ -35,6 +35,9 @@ def sendCO2Message(conf, co2):
 
 def co2Sensor(cfg):
     DEBUG = (cfg["DEBUG"].lower() == "true") or (cfg["DEBUG"].lower() == "yes")
+    #Flag to indicate that the CO2 sensor is running
+    with open("co2_sensor_running.txt", "w") as f:
+        f.write(f"CO2 sensor running at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     while True:
         # Use the software I2C bus (GPIO pins 23 + 24), which comes out as i2c-3
         # Need to add dtoverlay=i2c-gpio,bus=3 to config.txt to enable this
@@ -83,8 +86,11 @@ def co2Sensor(cfg):
                             sensor.wake_up()
                             sensor.stop_periodic_measurement()
                             sensor.reinit()
-                            sensor.start_periodic_measurement(0)                            
+                            sensor.start_periodic_measurement()                            
                             startWait = datetime.now()
+                            # touch a file to indicate that the CO2 sensor is still running
+                            with open("co2_sensor_running.txt", "w") as f:
+                                f.write(f"CO2 sensor did not return data in time, reinitializing at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                             sleep(5)
                         else:
                             sleep(0.5)
@@ -113,18 +119,24 @@ def co2Sensor(cfg):
                     sensor.stop_periodic_measurement()
                     sensor.reinit()
                     sensor.start_periodic_measurement(0)
+                    with open("co2_sensor_running.txt", "w") as f:
+                        f.write(f"CO2 sensor failed to read data {e} at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 except I2cError as er:
                     print(f"Reading CO2: I2C error: {er}")
                     sensor.wake_up()
                     sensor.stop_periodic_measurement()
                     sensor.reinit()
                     sensor.start_periodic_measurement(0)
+                    with open("co2_sensor_running.txt", "w") as f:
+                        f.write(f"CO2 sensor I2C error: {er} at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 except IOError as ie:
                     print(f"Reading CO2: IO error: {ie}")
                     sensor.wake_up()
                     sensor.stop_periodic_measurement()
                     sensor.reinit()
                     sensor.start_periodic_measurement(0)
+                    with open("co2_sensor_running.txt", "w") as f:
+                        f.write(f"CO2 sensor IO error: {ie} at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                 sleep(5)
 
 
