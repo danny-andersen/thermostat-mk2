@@ -80,17 +80,17 @@ def co2Sensor(cfg):
                     startWait = datetime.now()
                     while not data_ready:
                         data_ready = sensor.get_data_ready_status()
-                        if (datetime.now() - startWait).seconds >= CO2_MEASURE_PERIOD: 
+                        if (datetime.now() - startWait).seconds > CO2_MEASURE_PERIOD: 
                             # If we have not received a measurement in the last 30 seconds, reinitialize the sensor
                             print("CO2 sensor did not return data in time, reinitializing...")  
+                            # touch a file to indicate that the CO2 sensor is being reinitialized
+                            with open("co2_sensor_running.txt", "w") as f:
+                                f.write(f"CO2 sensor did not return data in time, reinitializing at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                             sensor.wake_up()
                             sensor.stop_periodic_measurement()
                             sensor.reinit()
                             sensor.start_periodic_measurement()                            
                             startWait = datetime.now()
-                            # touch a file to indicate that the CO2 sensor is still running
-                            with open("co2_sensor_running.txt", "w") as f:
-                                f.write(f"CO2 sensor did not return data in time, reinitializing at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
                             sleep(5)
                         else:
                             sleep(0.5)
@@ -108,11 +108,15 @@ def co2Sensor(cfg):
                             )
                         print(f"Relative Humidity [RH]: {relative_humidity}"
                             )
-                    if co2 != 400:
+                    if int(f"{co2}") > 400:
                         #Valid value
                         if (now - sendTime).seconds >= CO2_MEASURE_PERIOD: 
                             sendCO2Message(cfg, co2)
                             sendTime = datetime.now()
+                                                # touch a file to indicate that the CO2 sensor is being reinitialized
+                    with open("co2_sensor_running.txt", "w") as f:
+                        f.write(f"CO2 sensor returned: CO2: {co2} Temperature: {temperature} Humidity: {relative_humidity} at {now.strftime('%Y-%m-%d %H:%M:%S')}\n")
+
                 except Exception as e:
                     print(f"Reading CO2: Failed to measure CO2 sensor: {e}")
                     sensor.wake_up()

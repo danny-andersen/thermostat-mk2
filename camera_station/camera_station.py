@@ -260,5 +260,6 @@ if __name__ == "__main__":
                 print(
                     "CO2 sensor not updated in the last 5 minutes, restarting..."
                 )
-                exit
+                break
         sleep(1)
+    
