@@ -52,6 +52,22 @@ then
         echo "Received camera OFF command"
         echo "N" > camera_set_state.txt
     fi
+    if [ $contents = "external" ];
+    then
+        #Change motion port to support remote streaming. This is done when one is home.
+        motion_file=$(ls *motion.cfg)
+        new_motion_file=${motion_file}-external
+        cp $new_motion_file $motion_file
+        sudo systemctl restart motion
+    fi
+    if [ $contents = "internal" ];
+    then
+        #Change motion port to support intenral streaming only. This is done when people are home.
+        motion_file=$(ls *motion.cfg)
+        new_motion_file=${motion_file}-internal
+        cp $new_motion_file $motion_file
+        sudo systemctl restart motion
+    fi
     if [ $contents = "reset" ];
     then
         sudo reboot

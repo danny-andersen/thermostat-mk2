@@ -23,10 +23,12 @@ airquality_file=$(date +%Y%m%d)"_airquality.csv"
 gassensor_file=$(date +%Y%m%d)"_gassensor.csv"
 co2sensor_file=$(date +%Y%m%d)"_co2sensor.csv"
 sensor_dir=/sys/bus/w1/devices/28-051673fdeeff
+camera_port_state_file=camera_port_state.txt
 masterstation=../control_station
 video_picture_dir=motion_images/
 safeDevice=`cat safeDevices.txt`
 uploadStatus=N
+camera_numbers="2 3 4 6 7"
 
 #Check wifi up
 ping -c2 192.168.1.1 > /dev/null
@@ -71,6 +73,7 @@ then
       sudo /sbin/shutdown -r now
 fi
 
+change_camera_to_internal_port='N'
 dev=$(echo $safeDevice | sed 's/|/ /g')
 for d in $dev
 do
@@ -78,6 +81,7 @@ do
 	if [ $? == 0 ]
 	then
         #Device on network
+        change_camera_to_internal_port='Y'
         grep -q $d lan_devices.txt
         if [ $? == 1 ]
         then
@@ -109,6 +113,32 @@ do
         fi
 	fi
 done	
+
+camera_port_state=$(cat $camera_port_state_file)
+if [ $change_camera_to_internal_port = 'Y' ] && [ $camera_port_state != 'internal' ]
+then
+    #Change to internal port
+    echo "Changing cameras to internal port"
+    for cam in $camera_numbers
+    do
+        echo 'internal' > command-cam${cam}.txt
+        ./dropbox_uploader.sh upload command-cam${cam}.txt command-cam${cam}.txt > /dev/null 2>&1
+        rm command-cam${cam}.txt
+    done
+    echo 'internal' > $camera_port_state_file
+fi 
+if [ $change_camera_to_internal_port = 'N' ] && [ $camera_port_state != 'external' ]
+then
+    #Change to external port
+    echo "Changing camera to external port"
+    for cam in $camera_numbers
+    do
+        echo 'external' > command-cam${cam}.txt
+        ./dropbox_uploader.sh upload command-cam${cam}.txt command-cam${cam}.txt > /dev/null 2>&1
+        rm command-cam${cam}.txt
+    done
+    echo 'external' > $camera_port_state_file
+fi
 
 if [ ! -f thermostat_status.txt ]
 then
