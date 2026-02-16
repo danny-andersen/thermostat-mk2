@@ -1,43 +1,65 @@
 #!/bin/bash
 
-# Path to the log file
-LOG_FILE="/home/danny/camera_with_switch/motion.log"
+LOGFILE="/home/danny/camera_with_switch/motion.log"
+SEARCH="Watchdog timeout did NOT restart"
 
-# Watchdog message to search for
-WATCHDOG_MSG="Watchdog timeout did NOT restart"
-
-# Get the system boot time in epoch
-#BOOT_TIME=$(who -b | awk '{print $3 " " $4}')
-BOOT_TIME=$(uptime --since)
+# --- 1. Get last boot time (epoch seconds) ---
+BOOT_TIME=$(who -b | awk '{print $3, $4}')
 BOOT_EPOCH=$(date -d "$BOOT_TIME" +%s)
 
-# Get current year (since log doesn't include year)
+# --- 2. Find the most recent matching log entry ---
+LAST_ENTRY=$(grep "$SEARCH" "$LOGFILE" 2>/dev/null| tail -n 1)
+
+# If no entry found, exit quietly
+[ -z "$LAST_ENTRY" ] && exit 0
+
+# --- 3. Extract timestamp from the log entry ---
+# Example entry:
+# [0:motion] [ERR] [ALL] [Aug 02 03:00:31] motion_watchdog: Thread 1 - Watchdog timeout did NOT restart, killing it!
+#
+# The timestamp is the 4th [...] block.
+
+#echo "Last watchdog log entry: $LAST_ENTRY"
+TIMESTAMP=$(echo "$LAST_ENTRY" | awk -F'[][]' '{print $8}')
+
+# --- 4. Convert timestamp to epoch, handling year rollover ---
 CURRENT_YEAR=$(date +%Y)
+PREV_YEAR=$((CURRENT_YEAR - 1))
 
-# Search the log file for lines containing the message
-grep -aF "$WATCHDOG_MSG" "$LOG_FILE" | while read -r line; do
-    # Extract the 4th bracketed field (timestamp)
-    RAW_TIMESTAMP=$(echo "$line" | grep -oP '(\[[^]]*\])' | sed -n '4p' | tr -d '[]')
+# First, assume current year
+ENTRY_EPOCH=$(date -d "$TIMESTAMP $CURRENT_YEAR" +%s 2>/dev/null)
 
-    # Reformat: from "Jun 25 12:44:45" to "25 Jun 2025 12:44:45"
-    MONTH=$(echo "$RAW_TIMESTAMP" | awk '{print $1}')
-    DAY=$(echo "$RAW_TIMESTAMP" | awk '{print $2}')
-    TIME=$(echo "$RAW_TIMESTAMP" | awk '{print $3}')
-    PARSED_TIMESTAMP="$DAY $MONTH $CURRENT_YEAR $TIME"
+if [ -z "$ENTRY_EPOCH" ]; then
+    # Parsing failed entirely — safest to stop
+    echo "Failed to parse log timestamp $TIMESTAMP with current year. Exiting."
+    exit 0
+fi
 
-    # Convert to epoch
-    LOG_EPOCH=$(date -d "$PARSED_TIMESTAMP" +%s 2>/dev/null)
+NOW=$(date +%s)
 
-    #echo "boot:"  $BOOT_EPOCH "time:" $TIMESTAMP "watchdog:" $LOG_EPOCH
+# If the timestamp appears to be in the future, try last year
+if (( ENTRY_EPOCH > NOW )); then
+    ENTRY_EPOCH=$(date -d "$TIMESTAMP $PREV_YEAR" +%s 2>/dev/null)
 
-    # If the log entry is after the last boot, reboot
-    if [[ "$LOG_EPOCH" -gt "$BOOT_EPOCH" ]]; then
-        echo "Watchdog timeout after boot detected. Rebooting..."
-	echo "$(date): Reboot due to watchdog timeout" >> /home/danny/camera_with_switch/watchdog_reboot.log
-	if [[ -f /tmp/watchdog_rebooted ]]; then exit 0; fi
-	touch /tmp/watchdog_rebooted
-        sudo reboot
+    if [ -z "$ENTRY_EPOCH" ]; then
+        # Parsing failed again — stop
+        echo "Failed to parse log timestamp $TIMESTAMP with previous year. Exiting."
         exit 0
     fi
-done
+fi
+
+AGE=$(( NOW - ENTRY_EPOCH ))
+#echo "Watchdog log entry timestamp: $TIMESTAMP (epoch: $ENTRY_EPOCH), age: $AGE seconds"
+
+if (( AGE < 0 || AGE > 86400 )); then 
+    exit 0
+fi
+
+# --- 6. Compare log timestamp to last boot time ---
+if (( ENTRY_EPOCH > BOOT_EPOCH )); then
+    echo "Watchdog failure occurred after last boot — rebooting system."
+    #sudo reboot
+fi
+
+exit 0
 
