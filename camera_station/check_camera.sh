@@ -53,6 +53,32 @@ function turn_camera_on_off () {
             echo "N" > camera_status.txt
         fi
     fi
+    name=$(hostname)
+    if [ $name == "pi-media" ]
+    then
+        #Ensure cctv monitor service is in the correct state
+        #Should be off if camera is on (as no one home)
+        sudo systemctl is-active --quiet cctv
+        if [ $? -eq 0 ]
+        then
+            #CCTV service active
+            if [ $state = "Y" ]
+            then
+                #Turn off cctv service as camera is on
+                echo "Stopping CCTV service as camera running"
+                sudo service cctv stop
+            fi
+        else
+            if [ $state = "N" ]
+            then
+                #CCTV service should be on
+                echo "Starting CCTV service as camera running"
+                sudo service cctv start
+            fi
+        fi
+    fi
+
+
     #if [ $state = "Y" ]
     #then
     #    check_camera_working

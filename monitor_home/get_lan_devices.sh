@@ -125,6 +125,9 @@ then
         ./dropbox_uploader.sh upload command-cam${cam}.txt command-cam${cam}.txt > /dev/null 2>&1
         rm command-cam${cam}.txt
     done
+    #Turn Media Pi off for internal camera 
+    echo "off" > piMediaCameraPowerCommandFile.txt
+    mv piMediaCameraPowerCommandFile.txt $masterstation
     echo 'internal' > $camera_port_state_file
 fi 
 if [ $change_camera_to_internal_port = 'N' ] && [ $camera_port_state != 'external' ]
@@ -137,6 +140,9 @@ then
         ./dropbox_uploader.sh upload command-cam${cam}.txt command-cam${cam}.txt > /dev/null 2>&1
         rm command-cam${cam}.txt
     done
+    #Turn Media Pi on for external camera 
+    echo "on" > piMediaCameraPowerCommandFile.txt
+    mv piMediaCameraPowerCommandFile.txt $masterstation
     echo 'external' > $camera_port_state_file
 fi
 
@@ -199,6 +205,12 @@ if [ $? -eq 1 ]
 then
 	cp ${masterstation}/7_status.txt 7_status.txt
 	./dropbox_uploader.sh upload 7_status.txt 7_status.txt > /dev/null 2>&1
+fi
+diff -q ${masterstation}/8_status.txt 8_status.txt >/dev/null
+if [ $? -eq 1 ]
+then
+	cp ${masterstation}/8_status.txt 8_status.txt
+	./dropbox_uploader.sh upload 8_status.txt 8_status.txt > /dev/null 2>&1
 fi
 
 if [ ! -f ${airquality_file} ]
@@ -276,6 +288,15 @@ then
         mv relay_command.txt $masterstation
     fi
     ./dropbox_uploader.sh delete relay_command.txt
+fi
+
+./dropbox_uploader.sh download piMediaCameraPowerCommandFile.txt piMediaCameraPowerCommandFile.txt > /dev/null 2>&1
+if [ -f piMediaCameraPowerCommandFile.txt ]
+then
+    #Move to controlstation for execution
+    mv piMediaCameraPowerCommandFile.txt $masterstation
+    fi
+    ./dropbox_uploader.sh delete piMediaCameraPowerCommandFile.txt
 fi
 
 ./dropbox_uploader.sh download setTemp.txt setTemp.txt > /dev/null 2>&1

@@ -316,13 +316,15 @@ def getPowerControllerCommand():
     # TODO: Read a state file for this station and drive the relays to the required state using a timestamped state stack
     #          Save the new state in the state file.
     # Response: relays=<status in hex>
+    station = args.get("s", type=int)
     relayStatus = args.get("r", type=int)
     # Print out a message to the log if the state is changed.
     # print(f"Power controller: Relay state: {hex(relayStatus)}")
     with open(POWER_STATUS_FILE, "w", encoding="utf-8") as f:
         f.write(f"{datetime.now()}@{relayStatus}\n")
     response = getNoMessage()
-    if path.exists(POWER_COMMAND_FILE):
+    if station == 20 and path.exists(POWER_COMMAND_FILE):
+        #Command request is from the 6 relay Power controller 
         lastModTime = stat(POWER_COMMAND_FILE).st_mtime
         currentTime = datetime.now().timestamp()
         timeDiff = currentTime - lastModTime
@@ -382,6 +384,34 @@ def getPowerControllerCommand():
             )
             response = Response(response=msgBytes, mimetype="application/octet-stream")
             # print(f"Power controller: {command}")
+    elif station == 21 and path.exists(POWER_PI_CAM_COMMAND_FILE):
+        # Received request from Pi media power controller (single relay)
+        with open(POWER_PI_CAM_COMMAND_FILE, "r+", encoding="utf-8") as f:
+            try:
+                # Read all lines in the file
+                lines = f.readlines()
+                if lines == None or len(lines) == 0:
+                    # No commands in file
+                    remove(POWER_PI_CAM_COMMAND_FILE)
+                else:
+                    # Note only interested in the first line
+                    powerc = PowerControlMsg()
+                    powerc.relay = 1
+                    if "on" in lines[0]:
+                        print("Turning PI media relay on")
+                        powerc.state = 1
+                    else:
+                        powerc.state = 0
+                    msgBytes = getMessageEnvelope(
+                        POWER_COMMAND_MSG, bytearray(powerc), sizeof(PowerControlMsg)
+                    )
+                    response = Response(response=msgBytes, mimetype="application/octet-stream")
+            except Exception as e:
+                print(f"Power controller: Failed to read command file: {e}")
+                # raise e
+                pass
+        remove(POWER_PI_CAM_COMMAND_FILE)
+
     return response
 
 
