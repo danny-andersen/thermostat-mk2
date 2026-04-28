@@ -72,7 +72,7 @@ function turn_camera_on_off () {
             if [ $state = "N" ]
             then
                 #CCTV service should be on
-                echo "Starting CCTV service as camera running"
+                echo "Starting CCTV service as camera not running"
                 sudo service cctv start
             fi
         fi

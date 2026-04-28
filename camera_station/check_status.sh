@@ -25,55 +25,6 @@ video_picture_dir=$2
 only_monitor_when_noones_home='N'
 COMMAND_FILE=command-cam${CAM_NUM}.txt
 
-# echo "Downloading command file"
-./dropbox_uploader.sh download $COMMAND_FILE command.txt > /dev/null 2>&1
-if [ -f command.txt ]
-then
-    contents=$(cat command.txt)
-    # echo "Running command:" $contents
-    ./dropbox_uploader.sh delete $COMMAND_FILE
-    rm command.txt
-    if [ $contents = "photo" ];
-    then
-    	touch take-photo.txt
-    fi
-    if [ $contents = "video" ];
-    then
-    	touch take-video.txt
-    fi
-    if [ $contents = "camera-on" ];
-    then
-        echo "Received camera ON command"
-        force_camera_on='Y'
-        echo "Y" > camera_set_state.txt
-    fi
-    if [ $contents = "camera-off" ];
-    then
-        echo "Received camera OFF command"
-        echo "N" > camera_set_state.txt
-    fi
-    if [ $contents = "external" ];
-    then
-        #Change motion port to support remote streaming. This is done when one is home.
-        motion_file=$(ls *motion.cfg)
-        new_motion_file=${motion_file}-external
-        cp $new_motion_file $motion_file
-        sudo systemctl restart motion
-    fi
-    if [ $contents = "internal" ];
-    then
-        #Change motion port to support intenral streaming only. This is done when people are home.
-        motion_file=$(ls *motion.cfg)
-        new_motion_file=${motion_file}-internal
-        cp $new_motion_file $motion_file
-        sudo systemctl restart motion
-    fi
-    if [ $contents = "reset" ];
-    then
-        sudo reboot
-    fi
-fi
-
 #Camera Logic:
 #Basically if camera cmd is set to off or not set and only monitor when noones home is set then camera is turned on if noones home
 #Otherwise, if camera cmd is not set or set to on, camera is on.
@@ -120,6 +71,61 @@ else
         else
             camera_on='Y'
         fi
+    fi
+fi
+
+# echo "Downloading command file"
+./dropbox_uploader.sh download $COMMAND_FILE command.txt > /dev/null 2>&1
+if [ -f command.txt ]
+then
+    contents=$(cat command.txt)
+    # echo "Running command:" $contents
+    ./dropbox_uploader.sh delete $COMMAND_FILE
+    rm command.txt
+    if [ $contents = "photo" ];
+    then
+    	touch take-photo.txt
+    fi
+    if [ $contents = "video" ];
+    then
+    	touch take-video.txt
+    fi
+    if [ $contents = "camera-on" ];
+    then
+        echo "Received camera ON command"
+        force_camera_on='Y'
+        echo "Y" > camera_set_state.txt
+    fi
+    if [ $contents = "camera-off" ];
+    then
+        echo "Received camera OFF command"
+        echo "N" > camera_set_state.txt
+    fi
+    if [ $contents = "external" ];
+    then
+        #Change motion port to support remote streaming. This is done when noone is home.
+        motion_file=$(ls *motion.cfg)
+        new_motion_file=${motion_file}-external
+        cp $new_motion_file $motion_file
+        if [ $camera_on == 'Y' ]
+        then
+            sudo systemctl restart motion
+        fi
+    fi
+    if [ $contents = "internal" ];
+    then
+        #Change motion port to support internal streaming only. This is done when people are home.
+        motion_file=$(ls *motion.cfg)
+        new_motion_file=${motion_file}-internal
+        cp $new_motion_file $motion_file
+        if [ $camera_on == 'Y' ]
+        then
+            sudo systemctl restart motion
+        fi
+    fi
+    if [ $contents = "reset" ];
+    then
+        sudo reboot
     fi
 fi
 

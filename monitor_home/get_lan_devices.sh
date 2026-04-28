@@ -28,7 +28,7 @@ masterstation=../control_station
 video_picture_dir=motion_images/
 safeDevice=`cat safeDevices.txt`
 uploadStatus=N
-camera_numbers="2 3 4 6 7"
+camera_numbers="2 3 4 6 7 8"
 
 #Check wifi up
 ping -c2 192.168.1.1 > /dev/null
@@ -125,9 +125,10 @@ then
         ./dropbox_uploader.sh upload command-cam${cam}.txt command-cam${cam}.txt > /dev/null 2>&1
         rm command-cam${cam}.txt
     done
-    #Turn Media Pi off for internal camera 
-    echo "off" > piMediaCameraPowerCommandFile.txt
-    mv piMediaCameraPowerCommandFile.txt $masterstation
+    #Turn Media Pi off for internal camera
+    echo "off" > pi-media-power-command.txt
+    mv pi-media-power-command.txt $masterstation
+
     echo 'internal' > $camera_port_state_file
 fi 
 if [ $change_camera_to_internal_port = 'N' ] && [ $camera_port_state != 'external' ]
@@ -141,8 +142,9 @@ then
         rm command-cam${cam}.txt
     done
     #Turn Media Pi on for external camera 
-    echo "on" > piMediaCameraPowerCommandFile.txt
-    mv piMediaCameraPowerCommandFile.txt $masterstation
+    echo "on" > pi-media-power-command.txt
+    mv pi-media-power-command.txt $masterstation
+
     echo 'external' > $camera_port_state_file
 fi
 
@@ -295,7 +297,6 @@ if [ -f piMediaCameraPowerCommandFile.txt ]
 then
     #Move to controlstation for execution
     mv piMediaCameraPowerCommandFile.txt $masterstation
-    fi
     ./dropbox_uploader.sh delete piMediaCameraPowerCommandFile.txt
 fi
 

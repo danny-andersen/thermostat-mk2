@@ -415,7 +415,16 @@ def getPowerControllerCommand():
     return response
 
 
-# Format = /message?s=<station number>&rs=<1=rebooted>,&u=<1=update only, no resp msg needed>&t=<thermostat temp>&h=<humidity>&st=<set temp>&r=< mins to set temp, 0 off>&p=<1 sensor triggered, 0 sensor off>
+# Format = /message?s=<station number>
+# &rs=<1=rebooted>,&u=<1=update only, no resp msg needed>
+# &t=<thermostat temp>&h=<humidity>
+# &st=<set temp>&r=< mins to set temp, 0 off>
+# &p=<1 sensor triggered, 0 sensor off>
+# &nt=<next set temp>
+# &h=<humidity>
+# &r=<boiler on (1) or off>
+# &c=<camera on (1) or off (0)>
+
 @app.route("/message", methods=["GET"])
 def getMessage():
     args = request.args
