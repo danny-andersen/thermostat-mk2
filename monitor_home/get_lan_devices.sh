@@ -28,7 +28,7 @@ masterstation=../control_station
 video_picture_dir=motion_images/
 safeDevice=`cat safeDevices.txt`
 uploadStatus=N
-camera_numbers="2 3 4 6 7 8"
+camera_numbers="2 3 4 6 7 8 9"
 
 #Check wifi up
 ping -c2 192.168.1.1 > /dev/null
@@ -213,6 +213,12 @@ if [ $? -eq 1 ]
 then
 	cp ${masterstation}/8_status.txt 8_status.txt
 	./dropbox_uploader.sh upload 8_status.txt 8_status.txt > /dev/null 2>&1
+fi
+diff -q ${masterstation}/9_status.txt 9_status.txt >/dev/null
+if [ $? -eq 1 ]
+then
+	cp ${masterstation}/9_status.txt 9_status.txt
+	./dropbox_uploader.sh upload 9_status.txt 9_status.txt > /dev/null 2>&1
 fi
 
 if [ ! -f ${airquality_file} ]
